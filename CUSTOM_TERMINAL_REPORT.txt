@@ -1,0 +1,140 @@
+CUSTOM NIFTY 50 KP RESEARCH TERMINAL — IMPLEMENTATION REPORT
+
+START
+Double-click start_app.bat. URL: http://127.0.0.1:8520
+It reuses a healthy instance or starts FastAPI on loopback. Keep its console open.
+Select an IST timestamp, calculate, find historical matches, then View movement.
+The verified example is 20 November 2026, 10:30 IST, with exact matching.
+
+PRESERVATION AND ARCHITECTURE
+The KP mathematics and production archive were preserved. migration-baseline.zip
+is the source backup. Streamlit remains available via start_dashboard.bat, 8517.
+Workbook tests verify all 26 cached scores, seven components and five ruling lords
+per timestamp against the original workbook available on this computer.
+Original profile: Swiss Ephemeris, Lahiri sidereal, Placidus, mean nodes, Jaipur
+26.9124 N / 75.7873 E, Asia/Kolkata. kp_engine.py remains the source of truth.
+
+Frontend: React 19, TypeScript, Vite, Tailwind, Radix Accordion, TanStack Table and
+Query, Plotly. FastAPI serves web/dist, with Pydantic validation and core response
+contracts. custom_api.py exposes services; custom_services.py reconnects research.
+historical.py, minute_archive.py and upstox_history.py retain archive operations.
+Calculations and stored-data research work offline. Provider operations need internet.
+
+CUSTOM PAGES AND WORKFLOW
+Match explorer, KP calculator, Intraday timeline, Overview, Backtesting, Data
+manager, Research lab, Settings and Feedback are connected to actual services.
+The three-table workflow shows planets, saved matches, then genuine outcomes.
+There are 61,790 searchable cached configurations. Modes: exact five ruling
+lords, partial signature, selected-planet sign/nakshatra/sub-lord, KP score range,
+and circular longitude tolerance. Only earlier timestamps qualify.
+Features are versioned by engine hash and reproducibly cached. Background feature
+generation supports daily times or 1/5/15/30-minute session grids, with resumable
+batches up to ten years per submitted range, independently of price availability.
+Server pagination limits responses. Table sorting, search and local CSV exports
+apply to the displayed page. Columns can be hidden; planetary details expanded.
+Demo export controls are disabled. Source datasets are not publicly served.
+
+For matches, genuine reference and 5/15/30/60-minute prices, point changes and
+percent changes are attached. Missing prices stay null. All-match statistics
+report data availability, complete windows, positive/negative/flat observations,
+mean/median point changes and observed positive frequency. This is not a calibrated
+future trading probability. Daily and intraday research remain separate.
+
+Candles are stored at interval-close timestamps. Provider opening labels shift
+forward by their interval. Reference/forward closes are descriptive index changes,
+not executable fills. Every minute must exist inside the same session date, so
+holidays, gaps, breaks and closing boundaries are not bridged with daily prices.
+Charts use genuine OHLC with 1/5/15-minute complete aggregates, IST labels,
+crosshair, zoom/pan, selected timestamp, reference line, highlighted horizon and
+endpoint. No invented traded index volume. Optional daily fallback/KP overlay
+are not implemented.
+
+INSTALLED MARKET DATA (NO NEW AUTHENTICATED UPSTOX IMPORTS)
+NIFTY daily: 7,706 records, 1995-11-03 through 2026-11-19.
+Minute candles: 604,239; 2017-04-03 09:16 IST through 2026-11-19 15:30 IST.
+Accepted minute sessions: 1,613. Quarantined source sessions: 770.
+Official daily sessions without accepted minutes inside minute coverage: 768.
+Three accepted dates have fewer than 375 bars; special sessions may be shorter.
+Minute source: Technovus public archive, reconciled against NSE daily extrema.
+Daily sources: NSE through PowerNSE, direct NSE, and 15 secondary archive records.
+VIX: 3,475 records, 2010-07-19 through 2026-11-19.
+Daily extrema reconciliation does not independently certify every minute candle.
+
+UPSTOX — ACTION REQUIRED FROM YOU
+No token is configured. Account authentication has NOT been verified. Zero new
+Upstox records were imported. Actual earliest/latest Upstox candles remain unknown.
+The official NSE instrument master was fetched and confirmed NSE_INDEX|Nifty 50,
+name Nifty 50, segment NSE_INDEX, instrument_type INDEX.
+
+1. Double-click configure_upstox.bat. Enter the token in the hidden local prompt.
+2. Windows Credential Manager stores it as service NIFTY KP Terminal / Upstox.
+3. In Settings, click Test connection.
+4. In Data manager request daily data from 2000-01-01, minutes from 2022-01-01,
+   ending at the last completed session. Inspect actual coverage after download.
+5. Refresh current session uses the distinct intraday endpoint; optional refresh
+   runs every 30 minutes while the local owner tab remains open.
+
+Official API reference:
+https://upstox.com/developer/api-documentation/v3/get-historical-candle-data/
+Documented start dates are not a guarantee of selected-index completeness.
+Minute requests use <=28-day batches; daily requests <=366-day batches.
+Bounded retries handle rate limits/transient errors. Numeric Retry-After up to
+60 seconds is honored; longer pauses stop for later resume. Checkpoints include
+validated empty ranges. Raw provenance persists. Restarting skips saved ranges.
+Existing prices take precedence; overlaps are recorded in broker_conflicts and
+broker_daily_conflicts, never silently overwritten. No order APIs were added.
+Credentials never enter React, browser storage, API responses or source files.
+
+RESEARCH AND OPERATIONS
+Original annual expanding/purged daily backtests and chronological intraday
+holdouts are retained. The daily lab compares 11 factors on common held-out dates,
+with lagged market context and adjusted monthly sign tests.
+Jobs persist status in archive/custom-jobs.json. Resubmit the same range after an
+interruption to resume saved checkpoints. Cancellation occurs between provider
+or feature-day batches. Network downloads do not hold the astronomy lock.
+The custom UI uses the fixed original astronomy profile. Alternate-location
+experiments, original NSE-specific import/report utilities and other legacy
+advanced controls remain in the Streamlit fallback. Do not run simultaneous
+bulk writers from both interfaces against DuckDB.
+
+SHARING AND FEEDBACK
+Read PRIVATE_DEMO.md. start_private_demo.bat runs local checks, asks for data
+sharing permission, then requires typing SHARE before any internet exposure.
+Default expiration 24 hours; maximum 48. stop_private_demo.bat revokes access and
+kills the connector while leaving the local app running. The latest brief's
+read-only demo replaces the earlier full-owner request. Authorization is enforced
+at the gateway; research database transactions are read-only. No admin endpoints,
+files or credentials are available remotely. Raw CSV export is absent in demo UI.
+Feedback captures page/time/result, expected/actual behavior and comments. It is
+stored separately at %LOCALAPPDATA%\NiftyKPPrivateDemo\custom-feedback.sqlite3;
+review through the local Feedback page or review_demo_feedback.bat.
+No permanent deployment, source publication or internet tunnel was launched.
+Remote Cloudflare reachability remains untested pending your sharing approval.
+
+VERIFICATION AND LIMITATIONS
+Tests cover original workbook parity; match modes/order/pagination; missing data;
+aggregation; read-only transactions; origin/host checks; login/cookie flags;
+API authorization; expiration; feedback; mocked connector stop; provider retry,
+resume and source precedence. Synthetic test fixtures are labelled as such.
+Real browser acceptance uses the installed archive, not generated prices.
+Verified: 2026-11-20 10:30 IST -> nine exact matches -> genuine 2023-09-01 15:15 IST
+chart, showing -11.80 points (-0.060715%) over 15 minutes. Three matches have full
+15-minute windows, five have reference prices; four lack reference prices.
+No browser JavaScript errors. Screenshot: verification/explorer.png.
+
+Commands:
+  .venv\Scripts\python -m pytest -q
+  cd web, then npm ci and npm run build
+  .venv\Scripts\python verify_browser.py (development Playwright + Edge required)
+  .venv\Scripts\python -X utf8 -m private_demo.session check (strictly local)
+
+Actual Upstox authentication/data coverage and external tunnel connectivity are
+externally gated acceptance items, not claimed complete. The full legacy control
+set is preserved in Streamlit rather than all controls being duplicated in React.
+Plotly loads on demand; its chunk is ~4.85 MB before compression. The current
+test environment emits an httpx/Starlette deprecation warning.
+
+FINAL CHECK — 21 November 2026 IST
+35 automated tests passed. Production TypeScript/Vite build succeeded.
+Edge real-archive acceptance passed with zero JavaScript errors. Local private
+demo preflight passed. No cloudflared process or internet tunnel was started.

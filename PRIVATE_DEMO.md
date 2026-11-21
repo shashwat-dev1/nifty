@@ -1,0 +1,13 @@
+# Temporary private custom terminal
+
+Double-click start_private_demo.bat. It starts the custom React/FastAPI dashboard on loopback port 8520 if needed, then puts password authentication in front of its research endpoints. The latest custom-app brief's read-only sharing requirement supersedes the earlier full-owner request.
+
+Choose a duration (24 hours by default, up to 48). The launcher checks password authentication, calculations, blocked administrative routes and blocked file access. Confirm that you have permission to share the displayed market data by typing DATA, then approve internet exposure by typing SHARE. This confirmation does not itself grant redistribution rights. The temporary HTTPS URL and fresh random password appear in the owner console. Send these separately. Keep the window open and computer awake. No tunnel starts before SHARE.
+
+Double-click stop_private_demo.bat to close the tunnel and revoke session access. Expiration disables all requests and terminates the connector. Closing the owner console also kills its connector through a Windows Job Object. The original local dashboard remains running.
+
+The tester can calculate KP values, inspect planetary positions, explore matches and real charts, and submit feedback. Administrative routes, imports, downloads, backtests, diagnostics, database files and source files are blocked by the gateway independently of the UI. Research queries run in DuckDB read-only transactions. The shared UI has no CSV export controls. Review feedback in the local custom app's Feedback page or review_demo_feedback.bat; it is stored separately in %LOCALAPPDATA%\NiftyKPPrivateDemo\custom-feedback.sqlite3.
+
+The password verifier is salted scrypt and held in memory, with no reusable plaintext password stored in source or on disk. Secure, HttpOnly, SameSite=Strict cookies hold opaque tokens whose hashes are retained in memory. New login invalidates the old cookie. Login failures are rate limited. WebSockets are blocked because this frontend does not need them. Cloudflare's pinned connector is checksum verified and receives a sanitized environment without Upstox variables.
+
+Run `.venv\Scripts\python -X utf8 -m private_demo.session check` for local-only checks. The custom frontend was tested in Edge using genuine archive data, and local proxy authentication/authorization passed. Tests simulate connector expiration and shutdown. No public tunnel was launched; actual remote connectivity remains pending your explicit approval. Research scores and historical frequencies are not validated future trading probabilities. No trade execution is implemented.

@@ -1,0 +1,25 @@
+{
+  "training": {
+    "n": 2,
+    "up": 1,
+    "down": 1,
+    "flat": 0,
+    "up_fraction": 0.5,
+    "up_95pct_wilson_low": 0.0945,
+    "up_95pct_wilson_high": 0.9055,
+    "mean_forward_return_pct": 0.02502
+  },
+  "test": {
+    "n": 0,
+    "up": 0,
+    "down": 0,
+    "flat": 0,
+    "up_fraction": null,
+    "up_95pct_wilson_low": null,
+    "up_95pct_wilson_high": null,
+    "mean_forward_return_pct": null
+  },
+  "test_matched": 0,
+  "matches": [],
+  "notes": "Research only. No commissions/slippage. Matching rows are not independent. Train/test split is fixed."
+}
