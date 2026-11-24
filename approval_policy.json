@@ -1,0 +1,21 @@
+{
+  "version": "paper-policy-1.0",
+  "scope": "Technical eligibility for paper research only",
+  "frozen_on": "2026-11-24",
+  "eligible_evaluation": "Prospective observations created after policy freeze and model freeze; 2026 and all previous research periods are development evidence only",
+  "gates": {
+    "data_quality": "Every evaluated input/label has verified spot-index provenance, timezone, complete required candle windows and an evidence-backed exchange session",
+    "reproducibility": "Frozen artifact SHA256 and schema match; reload probability and regression maximum absolute difference <= 1e-10",
+    "cutoff": "Fit and calibration label ends strictly precede model freeze; inputs available no later than forecast creation",
+    "sample": "At least 1000 prospective outcomes across at least 60 verified trading days per target",
+    "calibration": "Day-cluster-bootstrap upper 95% confidence bound for equal-width 10-bin multiclass ECE <= 0.05",
+    "proper_scores": "No worse than frozen prior-frequency baseline on log loss and multiclass Brier; paired day-bootstrap upper 95% bound on excess loss <= 0",
+    "interval": "Nominal 90%; day-bootstrap 95% coverage interval wholly within [0.85,0.95]",
+    "width": "Mean point interval width <= frozen baseline width on identical evaluation timestamps",
+    "leakage": "Temporal perturbation tests pass, preprocessing fit only on training, calibration only on prior calibration period, no revised-model selection on 2026",
+    "freshness": "Completed genuine candle <=120 seconds old; timestamp <= creation; session open; elapsed horizon ends before verified close",
+    "session": "Unknown or conflicting schedule evidence blocks recording",
+    "multiplicity": "All model/target comparisons disclosed; no superiority claim without preregistered family adjustment and dependence-aware paired evaluation"
+  },
+  "initial_decision": "BLOCKED: no prospective outcomes under this newly frozen policy; no retroactive approval"
+}
