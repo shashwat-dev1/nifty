@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import Plotly from "plotly.js-dist-min";
 const ist = (t: any) =>
   new Date(new Date(t).getTime() + 19800000).toISOString().slice(0, 19);
-export default function SessionChart({ selected, horizon }: any) {
+export default function SessionChart({ selected, horizon, transitions=[], predictions=[] }: any) {
   const node = useRef<HTMLDivElement>(null),
     [interval, setInterval] = useState(1);
   const { data, error, isPending } = useQuery({
@@ -86,6 +86,8 @@ export default function SessionChart({ selected, horizon }: any) {
         y: [exit],
         marker: { color: "#e0be7b", size: 10 },
       });
+    if(transitions.length){traces.push({type:'scatter',mode:'lines+markers',name:'KP score',x:transitions.map((r:any)=>ist(r.timestamp)),y:transitions.map((r:any)=>r.score),yaxis:'y2',text:transitions.map((r:any)=>'Moon sub: '+r.moon_sub),line:{color:'#c8af75',width:1}});}
+    if(predictions.length)traces.push({type:'scatter',mode:'markers',name:'Prospective paper forecasts',x:predictions.map((r:any)=>ist(r.timestamp)),y:predictions.map((r:any)=>r.reference),text:predictions.map((r:any)=>r.model_version+' · '+r.horizon+'m · expected '+r.expected_points+' pts · interval '+r.lower_points+' to '+r.upper_points),marker:{symbol:'diamond',size:10,color:'#e0be7b'}});
     Plotly.newPlot(
       el,
       traces,
@@ -95,7 +97,7 @@ export default function SessionChart({ selected, horizon }: any) {
         font: { color: "#b8c6d7" },
         height: 460,
         margin: { l: 65, r: 25, t: 30, b: 45 },
-        showlegend: false,
+        showlegend: true,yaxis2:{overlaying:"y",side:"right",title:{text:"KP score"},showgrid:false},
         hovermode: "closest",
         xaxis: {
           showspikes: true,
@@ -109,7 +111,7 @@ export default function SessionChart({ selected, horizon }: any) {
       { responsive: true, displaylogo: false },
     );
     return () => Plotly.purge(el);
-  }, [data, selected, horizon]);
+  }, [data, selected, horizon,transitions,predictions]);
   return (
     <section aria-label="Historical chart">
       <div className="sectionhead">

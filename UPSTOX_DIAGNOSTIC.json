@@ -1,0 +1,24 @@
+{
+  "instrument": "NSE_INDEX|Nifty 50",
+  "current": {
+    "count": 0,
+    "first": null,
+    "last": null
+  },
+  "historical": {
+    "count": 375,
+    "first": "2026-11-23T09:15:00+05:30",
+    "last": "2026-11-23T15:29:00+05:30"
+  },
+  "quote": {
+    "http_status": 200,
+    "data": [
+      {
+        "instrument_token": "NSE_INDEX|Nifty 50",
+        "last_price": 25349.65,
+        "last_trade_time": "1795429800000",
+        "timestamp": "2026-11-24T12:47:12.09+05:30"
+      }
+    ]
+  }
+}

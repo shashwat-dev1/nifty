@@ -1,0 +1,28 @@
+24 November 2026 — fixed-protocol research run
+Original workbook parity: 26/26 cases. Historical global correctness is not established by parity.
+Actual stored market index: 54265 timestamps, 2017-04-03 to 2026-11-20, 15-minute grid.
+Datasets usable rows: 15m 47813; 30m 45636; 60m 41293; 120m 32617; 240m 15265.
+Four models trained for each horizon and each annual test year 2023–2026:
+prior-frequency baseline and regularized logistic market-only, KP-only, combined.
+Training expands using only prior years; one-day embargo and label-end purging.
+Test windows are non-overlapping. Fixed C=.1; no search over the final 2026 test.
+Neutral class: within +/-0.05 percent. Historical replay only; no saved live forecasts.
+Market inputs: prior momentum/volatility, weekday/time. KP: ruling lords, score components,
+sine/cosine planetary positions. No future target is included in input columns.
+2026 15m accuracy: baseline .423029; market .450415; KP .423859; combined .442739.
+2026 15m log loss: baseline 1.081619; market 1.050182; KP 1.086489; combined 1.060765.
+Across all five final-test horizons combined log loss is worse than market-only.
+No demonstrated probability improvement from KP in this protocol. 240m combined accuracy
+is higher, but probability losses are worse; no predictive success or significance claim.
+All fold metrics/confusion matrices: ML_RESULTS.csv. Actual predictions and feature datasets:
+archive/ml. Calibration bins describe uncalibrated model output, not validated calibration.
+New pages: Model Evaluation and Daily Research. Daily chart plus saved KP transitions.
+Screenshots: verification/model-evaluation.png and verification/daily-research.png.
+49 regression tests passed; additional future-price perturbation leakage test passed.
+Frontend build and both new pages browser-verified before calibration table addition.
+Limitations: authoritative full historical exchange calendar is not obtained; candle presence
+is not proof of complete session coverage. Data download coverage remains incomplete.
+Remaining-session and next-session targets are not trained. No prospective persisted model,
+forward prediction audit trail, confidence intervals, regime analysis or multiple-test
+significance claims. Daily workspace does not yet overlay predictions/transitions on price.
+The new pipeline is functional research groundwork, not complete acceptance of all phases.

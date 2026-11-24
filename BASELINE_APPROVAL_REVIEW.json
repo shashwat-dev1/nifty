@@ -1,0 +1,24 @@
+{
+  "artifact_reproducibility": "PASS",
+  "schema": "PASS",
+  "cutoff": "PASS",
+  "training_data_completeness": "BLOCKED: authoritative session/provenance review incomplete",
+  "calibration": "BLOCKED: no predeclared acceptance tolerance",
+  "interval_review": "BLOCKED: no predeclared acceptance tolerance",
+  "validation_recalculated": {
+    "n": 5457,
+    "mae": 17.360518242111826,
+    "coverage": 0.9263331500824629,
+    "predicted_class_frequencies": [
+      0.2834753832225032,
+      0.4150978739346258,
+      0.30142674284287096
+    ],
+    "observed_class_frequencies": [
+      0.24390690855781566,
+      0.49386109584020527,
+      0.26223199560197913
+    ]
+  },
+  "approval": "NOT APPROVED"
+}

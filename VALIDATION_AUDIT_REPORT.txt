@@ -1,0 +1,24 @@
+24 November 2026 validation continuation
+Saved metrics reconciled for 80 groups. All compared models use identical timestamps,
+classes and targets. No duplicate prediction timestamps per model/horizon/year; elapsed
+test windows do not overlap. Neutral threshold fixed at +/-0.05 percent.
+2026 15m sample: 4820 events, 220 trading days; negative 1392, neutral 2039, positive 1389.
+Market accuracy .45041494; whole-trading-day bootstrap marginal 95% CI .429038–.471080.
+Full per-year/per-model counts, intervals and confusion matrices: archive/ml/audit.json.
+These intervals are not simultaneous significance tests across 80 comparisons. No alpha claim.
+Training code uses prior label-end purge and one-day embargo, fixed C=.1, no parameter search.
+Cannot independently certify that no human feature decisions were informed by prior 2026
+results; treat 2026 as already examined. Any revised model needs a newly frozen future period.
+Current ledger implements append-only SQLite forecast/outcome events with update/delete
+triggers, creation timestamps, timezone/probability/input checks, replay rejection and
+unvalidated-model rejection. No public forecast-creation endpoint is enabled: no model is
+approved for prospective use. Ledger is not a complete operational forecasting service.
+Added optional daily chart KP-score overlay with Moon sub-lord hover text. No invented paths.
+51 tests passed. Frontend build succeeded. Daily overlay browser rendering checked.
+Outstanding: historical authoritative session calendar, full authorized downloads, session-
+based model targets, immutable operational model registry, calibrated prospective forecasts,
+prediction/match overlays, complete session quality certification and significance analysis.
+Momentum uses last 15 stored rows, not guaranteed 15 uninterrupted minutes; volatility uses
+last 30 stored rows. Forward labels require complete minute windows, but input-gap validation
+must be strengthened in a separately versioned model without reusing 2026 for tuning.
+Do not interpret existing metrics as deployment readiness or trading profitability.

@@ -233,6 +233,69 @@ def broker_status():return {"configured":bool(token()),"instrument":"NSE_INDEX|N
 def market():
     from market_status import status
     return status(token())
+
+@app.get('/api/ml/evaluation')
+def ml_evaluation():
+    from ml_research import OUT
+    if not (OUT/'metrics.json').exists():return {'status':'unavailable','metrics':[],'predictions':[]}
+    frame=pd.read_parquet(OUT/'predictions.parquet')
+    return {'status':'historical replay only','metrics':json.loads((OUT/'metrics.json').read_text()),'predictions':clean(frame.tail(500)),'calibration':json.loads((OUT/'calibration.json').read_text()) if (OUT/'calibration.json').exists() else []}
+
+@app.get('/api/ml/movement')
+def movement_evaluation(day:date|None=None):
+    from movement_models import OUT
+    if not (OUT/'metrics.json').exists():return {'metrics':[],'predictions':[],'status':'Prediction unavailable'}
+    frame=pd.read_parquet(OUT/'predictions.parquet')
+    if day is not None:frame=frame[pd.to_datetime(frame.timestamp,utc=True).dt.tz_convert(IST).dt.date==day]
+    return {'metrics':json.loads((OUT/'metrics.json').read_text()),'predictions':clean(frame.tail(500)),'status':'Development replay only; 2026 excluded'}
+
+@app.get('/api/admin/paper')
+def paper_status():
+    from paper_service import status
+    from paper_scheduler import config
+    return {**status(),'schedule':config()}
+
+class PaperSchedule(BaseModel):
+    enabled:bool=False
+    windows:list[str]=Field(default_factory=lambda:['09:30','10:00','11:00','12:00','13:00','14:00'],max_length=20)
+
+@app.post('/api/admin/paper/schedule')
+def paper_schedule(body:PaperSchedule):
+    from paper_scheduler import save,config
+    for v in body.windows:
+        try:clock.fromisoformat(v)
+        except ValueError:raise HTTPException(422,'Invalid IST time')
+    save({**config(),**body.model_dump()})
+    return config()
+
+@app.on_event('startup')
+def start_paper_worker():
+    from paper_scheduler import start
+    start()
+
+@app.on_event('shutdown')
+def stop_paper_worker():
+    from paper_scheduler import STOP
+    STOP.set()
+
+@app.post('/api/admin/paper/settle')
+def paper_settle():
+    from paper_service import settle,status
+    with LOCK,db() as con:settle(con)
+    return status()
+
+@app.get('/api/daily-research')
+def daily_research(day:date):
+    with LOCK,db() as con:
+        bars=con.execute('select timestamp,open,high,low,close from intraday where timestamp::date=? order by timestamp',[day]).df()
+        features=con.execute('select ts timestamp,details from snapshots where ts::date=? and model=? order by ts',[day,MODEL]).df()
+    transitions=[];previous=None
+    for row in features.itertuples():
+        d=json.loads(row.details);state=(d['kp_score'],d['signature'])
+        if state!=previous:transitions.append({'timestamp':row.timestamp,'score':d['kp_score'],**d['ruling_planets']});previous=state
+    from paper_service import status as paper_records
+    forecasts=[r for r in paper_records()['predictions'] if r['kind']=='prospective paper' and pd.Timestamp(r['timestamp']).tz_convert(IST).date()==day]
+    return {'predictions':forecasts,'candles':clean(bars),'transitions':clean(pd.DataFrame(transitions)),'model':MODEL,'coverage':'Stored observations; session completeness is not certified'}
 @app.post("/api/admin/upstox/test")
 def broker_test():
     from upstox_history import verify_instrument,fetch

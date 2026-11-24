@@ -35,6 +35,8 @@ import { AstroSidebar } from "./AstroSidebar";
 import { ProjectionChart } from "./ProjectionChart";
 import { Research, FeedbackForm } from "./Research";
 import { Timeline, Import, Lab } from "./Extras";
+import {PaperPredictions} from "./PaperPredictions";
+import {ResearchWorkspace} from "./ResearchWorkspace";
 import {OutcomeSummary} from "./OutcomeSummary";
 import {
   PLANET_META,
@@ -654,6 +656,8 @@ function App() {
             </React.Suspense>
           )}
 
+{!demo&&page==='Prospective Predictions'&&<PaperPredictions Table={Table}/>}
+{!demo&&['Daily Research','Model Evaluation'].includes(page)&&<ResearchWorkspace daily={page==='Daily Research'} Table={Table}/>}
           {/* ACTIVE VIEW: PLANETARY MATCH EXPLORER */}
           {page === "Match explorer" && (
             <>

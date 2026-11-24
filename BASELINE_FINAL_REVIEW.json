@@ -1,0 +1,32 @@
+{
+  "decision": "NOT APPROVED",
+  "interval_target": ".05/.95 residual quantiles imply nominal 90%, not 95%",
+  "acceptance": "No predeclared tolerance; do not retrofit a pass threshold",
+  "reviews": [
+    {
+      "year": 2025,
+      "n": 5457,
+      "days": 249,
+      "nominal_coverage": 0.9,
+      "observed_coverage": 0.9263331500824629,
+      "coverage_day_bootstrap_ci95": [
+        0.9144181774750295,
+        0.9377587590604308
+      ],
+      "log_loss": 1.056175282873269,
+      "brier": 0.6371505559793995,
+      "predicted_frequencies": [
+        0.2834753832225032,
+        0.4150978739346258,
+        0.30142674284287096
+      ],
+      "observed_frequencies": [
+        0.24390690855781566,
+        0.49386109584020527,
+        0.26223199560197913
+      ]
+    }
+  ],
+  "data_quality": "BLOCKED: historical official schedules and provenance not certified",
+  "other_artifacts": "BLOCKED: original fitted estimators were not persisted; exact export cannot be recovered without controlled retraining"
+}

@@ -1,0 +1,23 @@
+24 November 2026 — artifact and worker implementation
+Registered fitted 15-minute baseline JSON artifact 466f31c24d80. Non-executable format,
+fixed schema/order, training fingerprint/cutoffs, class frequencies, mean/median/residual
+interval parameters, library versions, SHA256 and validation metrics. Reload outputs match
+exactly. Model directory/path and schema/checksum checks prevent arbitrary object loading.
+Approval remains blocked: training data verification, calibration and interval acceptance
+are not approved. Research replay metrics do not justify marking these checks passed.
+Other fitted market/KP/combined models are not yet exported; no false registration claimed.
+Operator-controlled scheduler persists enabled state/windows/status; starts with backend.
+It checks model gates before network work, skips past windows, verifies session, fetches
+current-session data, settles matured elapsed horizons and records eligible JSON-baseline
+inference through deterministic per-day/window/version keys. Defaults disabled.
+Only baseline JSON inference is implemented; other formats/horizons are unavailable.
+Settlement refresh currently targets today's candles; cross-day recovery fetching and
+session-horizon settlement remain incomplete. Calendar registry remains unverified.
+Upstox authenticated 24 November 12:43 IST; current-session candles zero. Last returned
+close 25366.4 at 23 November 15:30 IST is stale and cannot pass live freshness checks.
+56 tests passed; production frontend build passed; browser checked model blockers and
+scheduler control. No prospective forecasts generated. No model was automatically approved.
+The platform does not meet operational acceptance: incomplete calendar, no approved model,
+no fresh session candle today. Remaining independent work includes other model exports,
+full calendar/data validation, session targets, robust recovery and recorded-chart markers.
+No brokerage/order execution was introduced. Existing research outputs remain unchanged.

@@ -1,0 +1,30 @@
+Next-open-session verification — paper only
+
+1. Obtain official NSE schedule/circular for the exact date. Record source, opening,
+   closing and any special segments in archive/paper/verified-sessions.json.
+   Unknown dates stay blocked; do not infer an open day from weekdays/candle presence.
+2. Review BASELINE_FINAL_REVIEW.json. Model approval is NOT currently granted.
+   Do not set review flags merely to run this checklist. Freeze acceptance policy for
+   future evaluation before observing future results. Resolve data provenance first.
+3. Verify instrument NSE_INDEX|Nifty 50 against official master. Test current-session
+   candles and quote separately. Inspect candle close timestamp, not HTTP response time.
+   A prior-session quote/close cannot satisfy freshness. Keep secrets out of diagnostics.
+4. Only after approval and verified calendar: enable scheduler in Prospective Predictions.
+   Confirm exact model checksum, cutoff, schedule windows and IST clock. No backfill.
+5. At the next eligible window, confirm one forecast with created time before outcome,
+   input timestamp no later than creation, source/reference/model/probabilities/bounds.
+   Repeat/restart within window: same event ID and no duplicate record.
+6. After horizon, refresh genuine candles and settle. Missing minutes stay pending.
+   For session targets verify every minute through verified close, including special
+   hours. Cross-day recovery must not skip unknown exchange days.
+7. Compare direct stored close/reference with actual points/percent, error and coverage.
+   Verify original forecast row unchanged and outcome appended once.
+8. Verify daily chart marker date/reference/model/horizon against original ledger.
+   Until genuine forecasts exist, test markers only with isolated fixtures, never
+   inserted into production ledger. Historical replay must remain separately labelled.
+9. Disable scheduler after supervised check if any mismatch occurs. Save sanitized
+   diagnostics and screenshots. Approval denotes paper eligibility, not profitability.
+
+Current offline blockers are not market-dependent: incomplete official calendar/provenance
+certification, missing fitted nonbaseline artifacts, unapproved calibration/interval policy.
+Live verification cannot honestly complete until these are resolved.

@@ -1,0 +1,20 @@
+24 November 2026 — prospective platform groundwork
+Backend-managed paper_service.py adds registry evidence checks, artifact checksum and cutoff
+validation, fresh-input validation, verified-session gate, deterministic per-window keys,
+append-only records and idempotent elapsed-horizon settlement using real stored candles.
+Missing outcomes remain pending; no synthetic outcome is created. Settlement records actual
+points/class, correctness, absolute/squared error and interval inclusion separately.
+Prospective Predictions page shows real ledger state, model blockers and disabled windows.
+No model is approved: training scripts have not persisted frozen reproducible fitted artifacts,
+calibration/coverage approval is not established, verified-session registry is incomplete.
+No live prediction generation or automatic scheduler is enabled. Candidate windows are display
+configuration, not a running schedule. Settlement endpoint is manual and uses already-ingested
+candles; fetching outcomes and autonomous session scheduling remain unimplemented.
+No client API accepts model approval flags or arbitrary forecast output. Low-level recording
+function is backend-only. Local append-only triggers do not protect against a filesystem owner
+replacing the database; no external tamper-evident anchoring is claimed.
+54 backend tests passed. TypeScript/Vite build succeeded. Browser verifies blocked state.
+Existing KP engine, historical model outputs, daily KP overlay and private demo remain intact.
+No real-money execution. Full calendar/data reconciliation, automatic scheduler, approved model
+artifacts, live inference, and prediction overlays still require implementation. No prospective
+results or profitability claim is made.
