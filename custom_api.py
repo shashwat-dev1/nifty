@@ -61,7 +61,9 @@ class Moment(BaseModel):
 class Search(Moment):
     start:date=date(1995,11,3)
     end:date=date(2026,11,19)
-    mode:Literal["exact","partial","sign","nakshatra","sub","score","longitude"]="exact"
+    mode:Literal["exact","partial","sign","nakshatra","pada","star","sub","score","longitude","similarity"]="exact"
+    similarity:float=Field(80,ge=0,le=100)
+    weights:list[float]=Field(default_factory=lambda:[1,1,1,1,1],min_length=5,max_length=5)
     factors:list[Literal["day","moon_sign","moon_star","moon_sub","lagna"]]=FACTORS
     planets:list[Literal["Sun","Moon","Mars","Mercury","Venus","Jupiter","Saturn","Rahu","Ketu"]]=["Moon"]
     tolerance:float=Field(5,ge=0,le=180)
@@ -70,8 +72,10 @@ class Search(Moment):
     offset:int=Field(0,ge=0)
     limit:int=Field(25,ge=1,le=100)
     horizon:Literal[5,15,30,60]=15
+    neutral:float=Field(0,ge=0,le=10)
     @model_validator(mode="after")
     def valid_range(self):
+        if any(w<0 for w in self.weights) or sum(self.weights)<=0:raise ValueError("Weights must be nonnegative with positive sum")
         if self.end<self.start or self.maximum<self.minimum:raise ValueError("Invalid range")
         if self.mode=="partial" and not self.factors:raise ValueError("Choose at least one factor")
         if self.mode in ("sign","nakshatra","sub","longitude") and not self.planets:raise ValueError("Choose at least one planet")
@@ -109,7 +113,7 @@ def calculate(body:Moment):
         result=json.loads(detailed(body.timestamp))
     signs=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"]
     names="Ashwini Bharani Krittika Rohini Mrigashira Ardra Punarvasu Pushya Ashlesha Magha Purva-Phalguni Uttara-Phalguni Hasta Chitra Swati Vishakha Anuradha Jyeshtha Mula Purva-Ashadha Uttara-Ashadha Shravana Dhanishta Shatabhisha Purva-Bhadrapada Uttara-Bhadrapada Revati".split()
-    result["rows"]=[dict(planet=p,**v,zodiac=signs[int(v["longitude"]/30)],nakshatra_name=names[v["nakshatra"]-1]) for p,v in result["positions"].items()]
+    result["rows"]=[dict(planet=p,**v,zodiac=signs[int(v["longitude"]/30)],nakshatra_name=names[v["nakshatra"]-1],pada=int((v["longitude"]%(360/27))/(360/108))+1) for p,v in result["positions"].items()]
     return result
 def search_rows(con,body,all_rows=False):
     selected=KPChart(body.timestamp)
@@ -122,11 +126,20 @@ def search_rows(con,body,all_rows=False):
     if body.mode=="score":
         clauses.append("CAST(json_extract(details,'$.kp_score') AS DOUBLE) BETWEEN ? AND ?")
         args.extend([body.minimum,body.maximum])
-    for p in body.planets if body.mode in ("sign","nakshatra","sub","longitude") else []:
+    if body.mode=="similarity":
+        terms=[]
+        for k,w in zip(FACTORS,body.weights):
+            terms.append("CASE WHEN json_extract_string(details,'$.ruling_planets."+k+"')=? THEN ? ELSE 0 END")
+            args.extend([kp['ruling_planets'][k],w])
+        clauses.append("("+"+".join(terms)+")>=?")
+        args.append(sum(body.weights)*body.similarity/100)
+    for p in body.planets if body.mode in ("sign","nakshatra","pada","star","sub","longitude") else []:
         expr=f"CAST(json_extract(details,'$.positions.{p}.longitude') AS DOUBLE)"
         x=selected.longitude(p)
         if body.mode=="sign":clauses.append(f"floor({expr}/30)=?");args.append(int(x/30))
         elif body.mode=="nakshatra":clauses.append(f"floor({expr}/(360.0/27))=?");args.append(int(x/(360/27)))
+        elif body.mode=="pada":clauses.append(f"floor({expr}/(360.0/108))=?");args.append(int(x/(360/108)))
+        elif body.mode=="star":clauses.append(f"json_extract_string(details,'$.positions.{p}.star')=?");args.append(star_lord(x))
         elif body.mode=="sub":clauses.append(f"json_extract_string(details,'$.positions.{p}.sub')=?");args.append(sub_lord(x))
         else:clauses.append(f"abs((({expr}-?+540)%360)-180)<=?");args.extend([x,body.tolerance])
     where=" AND ".join(clauses)
@@ -143,7 +156,7 @@ def matches(body:Search):
             detail=json.loads(r.details)
             records.append(dict(timestamp=r.timestamp,score=detail["kp_score"],**detail["ruling_planets"],
                 matched=sum(detail["ruling_planets"][k]==kp["ruling_planets"][k] for k in FACTORS),
-                differences=", ".join(k for k in FACTORS if detail["ruling_planets"][k]!=kp["ruling_planets"][k]),category=body.mode,
+                differences=", ".join(k for k in FACTORS if detail["ruling_planets"][k]!=kp["ruling_planets"][k]),category=body.mode,similarity=100*sum(w for k,w in zip(FACTORS,body.weights) if detail["ruling_planets"][k]==kp["ruling_planets"][k])/sum(body.weights) if body.mode=="similarity" else None,
                 matched_factors=", ".join(k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k])))
         frame=pd.DataFrame(records)
         if len(frame):
@@ -169,11 +182,20 @@ def statistics(body:Search):
     present=int(out.close.notna().sum())
     return {"matches":count,"with_data":present,"without_data":count-present,"complete_forward_windows":len(values),
         "incomplete_forward_windows":present-len(values),
-        "positive":int((values>0).sum()),"negative":int((values<0).sum()),"flat":int((values==0).sum()),
+        "positive":int((values>body.neutral).sum()),"negative":int((values < -body.neutral).sum()),"flat":int((values.abs()<=body.neutral).sum()),
+        "positive_percent":float(100*(values>body.neutral).mean()) if len(values) else None,
+        "negative_percent":float(100*(values < -body.neutral).mean()) if len(values) else None,
+        "neutral_percent":float(100*(values.abs()<=body.neutral).mean()) if len(values) else None,
+        "neutral_threshold_percent":body.neutral,
+        "median_percent":float(values.median()) if len(values) else None,
+        "average_positive_points":float(points[values>body.neutral].mean()) if (values>body.neutral).any() else None,
+        "average_negative_points":float(points[values < -body.neutral].mean()) if (values < -body.neutral).any() else None,
+        "largest_positive_points":float(points.max()) if len(points) and points.max()>0 else None,
+        "largest_negative_points":float(points.min()) if len(points) and points.min()<0 else None,
         "average_points":float(points.mean()) if len(points) else None,
         "median_points":float(points.median()) if len(points) else None,
         "average_percent":float(values.mean()) if len(values) else None,
-        "observed_positive_frequency":float((values>0).mean()) if len(values) else None}
+        "observed_positive_frequency":float((values>body.neutral).mean()) if len(values) else None}
 @app.get("/api/candles",response_model=CandleResponse)
 def candles(timestamp:datetime,interval:int=1):
     if interval not in (1,5,15):raise HTTPException(422,"Unsupported candle interval")
@@ -198,6 +220,11 @@ def studies():
     return result
 @app.get("/api/upstox")
 def broker_status():return {"configured":bool(token()),"instrument":"NSE_INDEX|Nifty 50"}
+
+@app.get("/api/market")
+def market():
+    from market_status import status
+    return status(token())
 @app.post("/api/admin/upstox/test")
 def broker_test():
     from upstox_history import verify_instrument,fetch

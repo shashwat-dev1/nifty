@@ -35,6 +35,7 @@ import { AstroSidebar } from "./AstroSidebar";
 import { ProjectionChart } from "./ProjectionChart";
 import { Research, FeedbackForm } from "./Research";
 import { Timeline, Import, Lab } from "./Extras";
+import {OutcomeSummary} from "./OutcomeSummary";
 import {
   PLANET_META,
   formatDMS,
@@ -307,7 +308,7 @@ function Table({
                         {colId === "market_data" && val === "Available" ? (
                           <span className="tick-ok-pill">
                             <CheckCircle2 size={12} />
-                            Verified
+                            Available
                           </span>
                         ) : typeof val === "number" ? (
                           (val > 0 && (colId.includes("point") || colId.includes("percent") || colId.includes("return")) ? "+" : "") +
@@ -374,7 +375,11 @@ function App() {
   const [offset, setOffset] = useState(0);
   const [matches, setMatches] = useState<any>();
   const [selected, setSelected] = useState<any>();
+  const openMovement=(row:any)=>{setSelected(row);setPage('Chart detail');window.scrollTo({top:0,behavior:'smooth'});};
   const [horizon, setHorizon] = useState(15);
+  const [neutral,setNeutral]=useState(0);
+  const [similarity,setSimilarity]=useState(80);
+  const [weights,setWeights]=useState([1,1,1,1,1]);
   const [notice, setNotice] = useState("");
   const [stats, setStats] = useState<any>();
   const [buildClock, setBuildClock] = useState("10:30");
@@ -423,7 +428,7 @@ function App() {
         timestamp: calculation.timestamp,
         start,
         end,
-        mode,
+        mode,similarity,weights,
         factors,
         planets,
         tolerance,
@@ -438,6 +443,7 @@ function App() {
     },
   });
 
+  const summaryQuery=useQuery({queryKey:['outcome-summary',calculation?.timestamp,matches?.total,mode,factors,planets,start,end,tolerance,low,high,similarity,weights,horizon,neutral],enabled:!!matches&&!!calculation,queryFn:()=>api('statistics',{timestamp:calculation.timestamp,start,end,mode,factors,planets,tolerance,minimum:low,maximum:high,similarity,weights,horizon,neutral})});
   const invoke = async (path: string, body: any) => {
     try {
       setNotice(JSON.stringify(await api(path, body)));
@@ -452,13 +458,13 @@ function App() {
         timestamp: calculation.timestamp,
         start,
         end,
-        mode,
+        mode,similarity,weights,
         factors,
         planets,
         tolerance,
         minimum: low,
         maximum: high,
-        horizon,
+        horizon,neutral,
       }),
     onSuccess: setStats,
   });
@@ -467,11 +473,11 @@ function App() {
     setMatches(null);
     setSelected(null);
     setStats(null);
-  }, [mode, start, end, tolerance, low, high, factors, planets]);
+  }, [mode, start, end, tolerance, low, high, factors, planets,similarity,weights]);
 
   useEffect(() => {
     setStats(null);
-  }, [horizon]);
+  }, [horizon,neutral]);
 
   useEffect(() => {
     if (demo || !autoRefresh) return;
@@ -503,54 +509,12 @@ function App() {
   const handleCalculateAndFind = async () => {
     try {
       const calcResult = await calculate.mutateAsync();
-      if (calcResult?.timestamp) {
-        find.mutate(0);
-      }
+      setNotice("Calculation complete. Choose matching settings, then search.");
     } catch {}
   };
 
-  // Derive research synthesis text from real data
-  const synthesisInsight = useMemo(() => {
-    const starLord = calculation?.ruling_planets?.moon_star || "Rahu";
-    const subLord = calculation?.ruling_planets?.moon_sub || "Jupiter";
-    const winRate =
-      stats?.observed_positive_frequency != null
-        ? (stats.observed_positive_frequency * 100).toFixed(1) + "%"
-        : "85.7%";
-    return `When ${subLord} acts as Sub-Lord in 2nd/11th house constellations during ${starLord} Star Lord transits, NIFTY 50 exhibits an ${winRate} upward expectancy within the forward 15 to 60 minute liquidity window.`;
-  }, [calculation, stats]);
-
-  // Derive forward impact KPI stats
-  const kpiStats = useMemo(() => {
-    if (stats) {
-      const winPct = (stats.observed_positive_frequency * 100).toFixed(1);
-      const avgPts = stats.average_points
-        ? stats.average_points.toFixed(2)
-        : "+48.60";
-      return {
-        avg15: `${avgPts} pts`,
-        avg15Sub: `+0.28% • ${winPct}% Win`,
-        avg60: stats.average_points
-          ? (stats.average_points * 2.3).toFixed(2) + " pts"
-          : "+112.40 pts",
-        avg60Sub: `+0.65% • ${winPct}% Win`,
-        maxExcursion: "+185.20 pts",
-        downside: "Downside: -22.10",
-        profitFactor: "4.82",
-        longShort: `${stats.positive} Long / ${stats.negative} Short`,
-      };
-    }
-    return {
-      avg15: "+48.60 pts",
-      avg15Sub: "+0.28% • 78.5% Win",
-      avg60: "+112.40 pts",
-      avg60Sub: "+0.65% • 85.7% Win",
-      maxExcursion: "+185.20 pts",
-      downside: "Downside: -22.10",
-      profitFactor: "4.82",
-      longShort: "11 Long / 3 Short",
-    };
-  }, [stats]);
+  const synthesisInsight = "Historical observations require a completed query. Frequencies describe the available sample and do not establish predictive performance.";
+  const kpiStats = {avg15:stats?.average_points==null?'Unavailable':stats.average_points.toFixed(2)+' pts',avg15Sub:'Selected horizon only',avg60:'Unavailable',avg60Sub:'No separate 60-minute summary requested',maxExcursion:'Unavailable',downside:'Not calculated',profitFactor:'Unavailable',longShort:'No strategy defined'};
 
   // Presets handlers
   const handlePreset = (timeStr: string) => {
@@ -725,17 +689,13 @@ function App() {
                   {/* Ayanamsa */}
                   <div className="control-item-group">
                     <span className="control-label-tag">AYANAMSA</span>
-                    <select className="terminal-select">
-                      <option>KP New (23° 51' 12")</option>
-                      <option>Lahiri (24° 07' 22")</option>
-                      <option>Krishnamurti Standard</option>
-                    </select>
+<span>Original Lahiri · Asia/Kolkata</span>
                   </div>
 
                   {/* Coordinates */}
                   <div className="coordinate-display">
                     <MapPin size={12} className="text-amber-400" />
-                    <span>NSE Mumbai (19.0760° N, 72.8777° E)</span>
+                    <span>Jaipur (26.9124° N, 75.7873° E)</span>
                   </div>
 
                   {/* Presets */}
@@ -780,97 +740,7 @@ function App() {
                   </div>
                 </div>
 
-                {/* Row 2: Criteria Locks, Match Threshold Slider, Database Status */}
-                <div className="controls-row-bottom">
-                  <div className="criteria-locks-container">
-                    <span className="control-label-tag text-[9.5px]">
-                      KP CRITERIA LOCKS:
-                    </span>
-                    <label className="criteria-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={factors.includes("moon_sub")}
-                        onChange={(e) => {
-                          if (e.target.checked)
-                            setFactors([...factors, "moon_sub"]);
-                          else
-                            setFactors(factors.filter((f) => f !== "moon_sub"));
-                        }}
-                      />
-                      <span>Sub Lord [SL]</span>
-                    </label>
 
-                    <label className="criteria-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={factors.includes("moon_star")}
-                        onChange={(e) => {
-                          if (e.target.checked)
-                            setFactors([...factors, "moon_star"]);
-                          else
-                            setFactors(
-                              factors.filter((f) => f !== "moon_star"),
-                            );
-                        }}
-                      />
-                      <span>Star Lord [NL]</span>
-                    </label>
-
-                    <label className="criteria-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={factors.includes("moon_sign")}
-                        onChange={(e) => {
-                          if (e.target.checked)
-                            setFactors([...factors, "moon_sign"]);
-                          else
-                            setFactors(
-                              factors.filter((f) => f !== "moon_sign"),
-                            );
-                        }}
-                      />
-                      <span>Sign Lord [ZL]</span>
-                    </label>
-
-                    <label className="criteria-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={mode === "longitude"}
-                        onChange={(e) =>
-                          setMode(e.target.checked ? "longitude" : "exact")
-                        }
-                      />
-                      <span>Aspect Orb (&plusmn;3° exact)</span>
-                    </label>
-                  </div>
-
-                  {/* Match Threshold */}
-                  <div className="threshold-slider-group">
-                    <span className="control-label-tag text-[9.5px]">
-                      MATCH THRESHOLD:
-                    </span>
-                    <input
-                      type="range"
-                      min="80"
-                      max="100"
-                      defaultValue="92"
-                      className="threshold-slider"
-                    />
-                    <span className="text-cyan-400 font-mono font-bold text-xs">
-                      92.0%
-                    </span>
-                  </div>
-
-                  {/* Database Count Tag */}
-                  <div className="database-status-tag">
-                    <span className="db-dot" />
-                    <span>
-                      Database:{" "}
-                      {coverage.data?.features?.toLocaleString() || "2,980,412"}{" "}
-                      1-Min Epochs Indexed (2012-2024)
-                    </span>
-                  </div>
-                </div>
               </div>
 
               {calculate.error && (
@@ -914,7 +784,7 @@ function App() {
                       </div>
 
                       <span className="signature-pill">
-                        SIG: #JUP-VEN-RAH-982 RE
+                        {calculation?.signature??"No calculation"}
                       </span>
                     </div>
 
@@ -936,7 +806,7 @@ function App() {
                             <span>
                               Lagna Lord:{" "}
                               <strong>
-                                {calculation.ruling_planets?.lagna || "Mars"}
+                                {calculation.ruling_planets?.lagna || "Unavailable"}
                               </strong>
                             </span>
                             <span>|</span>
@@ -951,21 +821,21 @@ function App() {
                             <span>
                               Moon Sign:{" "}
                               <strong>
-                                {calculation.ruling_planets?.moon_sign || "Mars"}
+                                {calculation.ruling_planets?.moon_sign || "Unavailable"}
                               </strong>
                             </span>
                             <span>|</span>
                             <span>
                               Day Lord:{" "}
                               <strong>
-                                {calculation.ruling_planets?.day || "Venus"}{" "}
+                                {calculation.ruling_planets?.day || "Unavailable"}{" "}
                                 (Friday)
                               </strong>
                             </span>
                           </div>
 
                           <span className="rp-harmony-badge">
-                            88.4% HIGH DIVERGENCE
+                            Original KP profile
                           </span>
                         </div>
 
@@ -1032,14 +902,40 @@ function App() {
                       </button>
                     </div>
 
+<div className="historical-search-settings" style={{padding:16,borderBottom:"1px solid #253144"}}>
+                {/* Row 2: Criteria Locks, Match Threshold Slider, Database Status */}
+                <div className="controls-row-bottom">
+<div className="controls">
+<div style={{display:'flex',gap:8,flexWrap:'wrap',width:'100%'}} aria-label="Quick matching modes"><button type="button" aria-pressed={mode==='exact'} onClick={()=>setMode('exact')}>Exact match · all five lords</button><button type="button" aria-pressed={mode==='partial'} onClick={()=>setMode('partial')}>Partial match · choose lords</button></div>
+<label>Matching method<select aria-label="Matching method" value={mode} onChange={e=>setMode(e.target.value)}>{['exact','partial','sign','nakshatra','pada','star','sub','score','longitude','similarity'].map(m=><option key={m}>{m}</option>)}</select></label>
+<label>Search from<input type="date" value={start} onChange={e=>setStart(e.target.value)}/></label><label>Search through<input type="date" value={end} onChange={e=>setEnd(e.target.value)}/></label>
+{mode==='partial'&&<fieldset style={{padding:12,border:'1px solid #334155'}}><legend>Required ruling lords</legend><p>Select any combination. Only checked lords are required to match.</p>{['day','moon_sign','moon_star','moon_sub','lagna'].map(k=><label key={k} style={{display:'inline-flex',marginRight:16,gap:6}}><input type="checkbox" checked={factors.includes(k)} onChange={e=>setFactors(e.target.checked?[...factors,k]:factors.filter(v=>v!==k))}/>{k.replaceAll('_',' ')}</label>)}</fieldset>}
+{['sign','nakshatra','pada','star','sub','longitude'].includes(mode)&&<label>Selected planets<select multiple value={planets} onChange={e=>setPlanets(Array.from(e.target.selectedOptions,o=>o.value))}>{['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'].map(k=><option key={k}>{k}</option>)}</select></label>}
+{mode==='longitude'&&<label>Angular tolerance degrees<input type="number" min="0" max="180" value={tolerance} onChange={e=>setTolerance(+e.target.value)}/></label>}
+{mode==='score'&&<><label>Minimum score<input type="number" value={low} onChange={e=>setLow(+e.target.value)}/></label><label>Maximum score<input type="number" value={high} onChange={e=>setHigh(+e.target.value)}/></label></>}
+{mode==='similarity'&&<><label>Minimum weighted similarity %<input type="number" min="0" max="100" value={similarity} onChange={e=>setSimilarity(+e.target.value)}/></label><p>100 × sum of matching ruling-lord weights / sum of all five weights. This is categorical similarity, not positional identity.</p>{['day','moon_sign','moon_star','moon_sub','lagna'].map((k,i)=><label key={k}>{k} weight<input type="number" min="0" value={weights[i]} onChange={e=>setWeights(weights.map((w,j)=>j===i?+e.target.value:w))}/></label>)}</>}
+<label>Outcome horizon<select value={horizon} onChange={e=>setHorizon(+e.target.value)}>{[5,15,30,60].map(h=><option key={h} value={h}>{h} minutes</option>)}</select></label>
+<label>Neutral threshold ± percent<input aria-label="Neutral threshold" type="number" min="0" step="0.01" value={neutral} onChange={e=>setNeutral(+e.target.value)}/></label>
+</div>
+                  {/* Database Count Tag */}
+                  <div className="database-status-tag">
+                    <span className="db-dot" />
+                    <span>
+                      Database:{" "}
+                      {coverage.data?.features?.toLocaleString() || "Unavailable"}{" "}
+                      saved configurations
+                    </span>
+                  </div>
+                </div>
+</div>
                     {matches ? (
                       <>
                         <Table
                           rows={matches.rows.map((r: any) => ({
                             timestamp: r.timestamp,
-                            kp_signature: `${r.moon_sub ?? "Jup"}-${r.moon_star ?? "Ven"} / ${r.moon_sign ?? "Lib"}`,
-                            similarity: `${(92 + (r.matched ? r.matched * 1.4 : 3.5)).toFixed(1)}%`,
-                            matching_factors: r.matched_factors || "Exact SL, Trine",
+                            kp_signature: [r.day,r.moon_sign,r.moon_star,r.moon_sub,r.lagna].join("|"),
+                            similarity: r.similarity??"Not applicable",
+                            matching_factors: r.matched_factors || "Unavailable",
                             reference: r.reference != null ? r.reference.toFixed(2) : "--",
                             market_data: r.market_data,
                           }))}
@@ -1047,7 +943,7 @@ function App() {
                             const found = matches.rows.find(
                               (v: any) => v.timestamp === r.timestamp,
                             );
-                            setSelected(found);
+                            openMovement(found);
                           }}
                           isHistoricalMatchTable={true}
                           selectedTimestamp={selected?.timestamp}
@@ -1058,7 +954,7 @@ function App() {
                           <span className="text-slate-400 text-[11px]">
                             Showing {offset + 1}&ndash;
                             {Math.min(offset + 25, matches.total)} of{" "}
-                            {matches.total} high-confidence alignments
+                            {matches.total} matching configurations
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button
@@ -1103,79 +999,13 @@ function App() {
                       <div className="card-title-group">
                         <TrendingUp size={14} className="text-teal-400" />
                         <span className="card-main-title">
-                          FORWARD PRICE IMPACT &amp; WIN-RATE
+                          Observed forward movements
                         </span>
                       </div>
                     </div>
 
-                    <div className="winrate-panel-body">
-                      {/* Subtitle with Selected Case Info */}
-                      <div className="winrate-subtitle-row">
-                        <span className="text-slate-400 text-[11px]">
-                          Selected Case:{" "}
-                          {selected
-                            ? selected.timestamp.slice(0, 10)
-                            : "12 Sep 2021"}{" "}
-                          &bull; 14 Sample Historical Window
-                        </span>
-                        <span className="expectancy-indicator">
-                          <TrendingUp size={13} />
-                          BULLISH EXPECTANCY
-                        </span>
-                      </div>
-
-                      {/* 4 Metric KPI Cards Grid */}
-                      <div className="kpi-cards-grid">
-                        <div className="kpi-card">
-                          <span className="kpi-card-label">AVG 15M OUTCOME</span>
-                          <span className="kpi-card-value text-emerald-400">
-                            {kpiStats.avg15}
-                          </span>
-                          <span className="kpi-card-sub text-slate-400">
-                            {kpiStats.avg15Sub}
-                          </span>
-                        </div>
-
-                        <div className="kpi-card">
-                          <span className="kpi-card-label">AVG 60M OUTCOME</span>
-                          <span className="kpi-card-value text-emerald-400">
-                            {kpiStats.avg60}
-                          </span>
-                          <span className="kpi-card-sub text-slate-400">
-                            {kpiStats.avg60Sub}
-                          </span>
-                        </div>
-
-                        <div className="kpi-card">
-                          <span className="kpi-card-label">MAX EXCURSION</span>
-                          <span className="kpi-card-value text-teal-300">
-                            {kpiStats.maxExcursion}
-                          </span>
-                          <span className="kpi-card-sub text-slate-400">
-                            {kpiStats.downside}
-                          </span>
-                        </div>
-
-                        <div className="kpi-card">
-                          <span className="kpi-card-label">PROFIT FACTOR</span>
-                          <span className="kpi-card-value text-amber-400">
-                            {kpiStats.profitFactor}
-                          </span>
-                          <span className="kpi-card-sub text-slate-400">
-                            {kpiStats.longShort}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Composite Forward Projection Curve Graph */}
-                      <ProjectionChart
-                        referencePrice={selected?.reference || 17369.25}
-                        points15={48.6}
-                        points30={79.4}
-                        points60={112.4}
-                        isBullish={true}
-                      />
-
+                    <div className="winrate-panel-body"><OutcomeSummary stats={matches?summaryQuery.data:undefined} busy={!!matches&&summaryQuery.isFetching} error={summaryQuery.error} mode={mode} factors={factors} calculation={calculation} horizon={horizon} neutral={neutral}/>
+<p>Observed outcomes at {horizon} minutes. Neutral band ±{neutral}%. Missing windows are excluded.</p>
                       {/* Actual Historical Outcomes Table */}
                       <div className="mt-1">
                         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 flex justify-between items-center">
@@ -1213,17 +1043,17 @@ function App() {
                                   ? r.reference == null
                                     ? "Intraday NIFTY data unavailable for this date."
                                     : "Forward window incomplete"
-                                  : r["return_" + horizon] > 0
+                                  : r["return_" + horizon] > neutral
                                     ? "Positive"
-                                    : r["return_" + horizon] < 0
+                                    : r["return_" + horizon] < -neutral
                                       ? "Negative"
-                                      : "Flat",
+                                      : "Neutral",
                             }))}
                             onSelect={(r) => {
                               const found = matches.rows.find(
                                 (v: any) => v.timestamp === r.timestamp,
                               );
-                              setSelected(found);
+                              openMovement(found);
                             }}
                           />
                         ) : (
@@ -1234,21 +1064,6 @@ function App() {
                       </div>
 
                       {/* Summary & Stats Strip */}
-                      <div className="winrate-stats-footer">
-                        <div>
-                          <span>Statistical Significance: </span>
-                          <span className="stats-sig-text">
-                            p &lt; 0.008 (High Alpha Confidence)
-                          </span>
-                        </div>
-                        <div>
-                          <span>Sharpe Equivalency: </span>
-                          <strong className="text-amber-400 font-mono">
-                            2.41 Intraday
-                          </strong>
-                        </div>
-                      </div>
-
                       {/* Summarize button */}
                       <div className="pt-1">
                         <button
@@ -1315,30 +1130,7 @@ function App() {
                   </div>
                 </div>
 
-                <div className="synthesis-export-group">
-                  <span className="export-tag-label">EXPORT STUDY:</span>
-                  <button
-                    type="button"
-                    className="export-btn"
-                    onClick={() => alert("Exported Study CSV.")}
-                  >
-                    CSV
-                  </button>
-                  <button
-                    type="button"
-                    className="export-btn"
-                    onClick={() => alert("Exported Study JSON.")}
-                  >
-                    JSON
-                  </button>
-                  <button
-                    type="button"
-                    className="export-btn"
-                    onClick={() => alert("Generated PNG Report.")}
-                  >
-                    PNG REPORT
-                  </button>
-                </div>
+
               </div>
             </>
           )}
@@ -1397,7 +1189,7 @@ function App() {
                 api={api}
                 Table={Table}
                 moment={moment}
-                onSelect={setSelected}
+                onSelect={openMovement}
               />
             </div>
           )}
@@ -1613,23 +1405,7 @@ function App() {
       </div>
 
       {/* 5. Terminal Status Footer */}
-      <footer className="terminal-status-footer">
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-400">
-            &bull; Swiss Ephemeris v2.10 Verified
-          </span>
-          <span>&bull;</span>
-          <span>Geocentric Tropical / Krishnamurti Offset: 23°46'12"</span>
-          <span>&bull;</span>
-          <span className="text-cyan-400">
-            Forward Predictive Drift: +1.43 σ (High Reliability)
-          </span>
-        </div>
-        <div>
-          Terminal Session ID:{" "}
-          <span className="text-slate-300">KP-REC-20210912-1015</span>
-        </div>
-      </footer>
+<footer>Swiss Ephemeris · Lahiri sidereal · Mean nodes · Placidus · Jaipur · Asia/Kolkata. Historical observations do not establish future trading probabilities.</footer>
     </div>
   );
 }

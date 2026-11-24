@@ -60,8 +60,8 @@ def attach_prices(db,df,horizon):
     lookup=db.execute("""SELECT t.timestamp,c.close,
         CASE WHEN count(b.timestamp)=? AND max(b.timestamp)::DATE=t.timestamp::DATE
              THEN arg_max(b.close,b.timestamp) END AS exit_price
-        FROM targets t LEFT JOIN intraday c USING(timestamp)
-        LEFT JOIN intraday b ON CAST(b.timestamp AS DATE)=CAST(t.timestamp AS DATE) AND b.timestamp>t.timestamp AND b.timestamp<=t.timestamp+?*INTERVAL '1 minute' AND b.interval_minutes=1
+        FROM targets t CROSS JOIN range(1,?+1) steps(n) LEFT JOIN intraday c ON c.timestamp=t.timestamp AND c.interval_minutes=1
+        LEFT JOIN intraday b ON b.timestamp=t.timestamp+steps.n*INTERVAL '1 minute' AND b.interval_minutes=1
         GROUP BY t.timestamp,c.close""",[horizon,horizon]).df()
     return df.merge(lookup,on="timestamp",how="left")
 

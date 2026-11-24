@@ -26,20 +26,20 @@ export function AstroSidebar({
 }: AstroSidebarProps) {
   // Derive ruling lords from calculation
   const rp = calculation?.ruling_planets || {};
-  const ascLord = rp.lagna || "JUP";
-  const ascSub = calculation?.positions?.Lagna?.sub || "SAT";
+  const ascLord = rp.lagna || "Unavailable";
+  const ascSub = calculation?.positions?.Lagna?.sub || "Unavailable";
 
-  const moonStar = rp.moon_star || "MER";
-  const moonSub = rp.moon_sub || "VEN";
+  const moonStar = rp.moon_star || "Unavailable";
+  const moonSub = rp.moon_sub || "Unavailable";
 
   const sunLong = calculation?.positions?.Sun?.longitude;
-  const sunSign = calculation?.positions?.Sun?.sign || "MARS";
+  const sunSign = calculation?.positions?.Sun?.sign || "Unavailable";
   const sunDegFormatted =
     sunLong != null
-      ? `${Math.floor(sunLong % 30)}°${String(
+      ? `${Math.floor(sunLong % 30)}Â°${String(
           Math.floor(((sunLong % 30) - Math.floor(sunLong % 30)) * 60),
         ).padStart(2, "0")}'`
-      : "14°12'";
+      : "Unavailable";
 
   const aspects = calculateAspectMatrix(calculation?.positions);
 
@@ -157,7 +157,7 @@ export function AstroSidebar({
       {/* Bottom Ephemeris Details */}
       <div className="sidebar-footer-card">
         <div className="ephemeris-title">SWISS EPHEMERIS V2.10</div>
-        <div className="ephemeris-sub">Ayanamsa: Krishnamurti</div>
+        <div className="ephemeris-sub">Ayanamsa: Lahiri</div>
         <div className="ephemeris-sub">Calculation: Geocentric</div>
       </div>
     </aside>
