@@ -1,12 +1,12 @@
 """Versioned direction/point research, development years only; no 2026 retuning."""
-import hashlib,json,argparse
+import hashlib,json,argparse,os
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from historical import connect,MODEL,detailed
 from kp_engine import IST
 from ml_research import dataset
-OUT=Path(__file__).parent/'archive/movement'
+OUT=Path(__file__).parent/os.getenv('NIFTY_MOVEMENT_OUTPUT','archive/movement')
 
 def make_dataset(con,target):
     if target in ('remaining_session','next_session'):
@@ -92,6 +92,19 @@ def train(neutral=.05):
                 reg.fit(fit[cols],fit.points);mean=reg.predict(test[cols]);residual=cal.points-reg.predict(cal[cols])
                 # Chronological residual quantiles; empirical coverage is measured, never guaranteed.
                 lo,median,hi=np.quantile(residual,[.05,.5,.95]);actual=label(test.return_pct)
+                if os.getenv('NIFTY_EXPORT_MODELS')=='1':
+                    import skops.io as sio
+                    import sklearn,platform
+                    bundle={'classifier':calibrated,'regressor':reg}
+                    artifact=OUT/f'{target}-{year}-{name}.skops'
+                    sio.dump(bundle,artifact)
+                    unknown=sio.get_untrusted_types(file=artifact)
+                    # Only locally produced known sklearn/numpy types; never trust a foreign file.
+                    if any(not kind.startswith(('sklearn.','numpy.','scipy.')) for kind in unknown):raise ValueError('Unexpected serialization type')
+                    restored=sio.load(artifact,trusted=unknown)
+                    assert np.allclose(restored['classifier'].predict_proba(test[cols]),raw,atol=1e-10,rtol=0)
+                    assert np.allclose(restored['regressor'].predict(test[cols]),mean,atol=1e-10,rtol=0)
+                    artifact.with_suffix('.json').write_text(json.dumps({'version':version,'target':target,'year':year,'model':name,'features':cols,'fit_cutoff':str(fit.label_end.max()),'calibration_cutoff':str(cal.label_end.max()),'training_fingerprint':hashlib.sha256(pd.util.hash_pandas_object(fit,index=True).values.tobytes()).hexdigest(),'sha256':hashlib.sha256(artifact.read_bytes()).hexdigest(),'residual_quantiles':[float(lo),float(median),float(hi)],'neutral_percent':neutral,'software':{'python':platform.python_version(),'sklearn':sklearn.__version__,'numpy':np.__version__},'reload_tolerance':1e-10,'approval':'BLOCKED: development replay; frozen policy requires future prospective observations'},indent=2))
                 metrics.append(dict(target=target,model=name,year=year,version=version,kp_version=MODEL,fit_rows=len(fit),calibration_rows=len(cal),test_rows=len(test),neutral_percent=neutral,accuracy=float((prob.argmax(1)==actual).mean()),log_loss=float(log_loss(actual,prob,labels=[0,1,2])),brier=float(np.mean(np.sum((prob-np.eye(3)[actual])**2,axis=1))),mae=float(mean_absolute_error(test.points,mean)),rmse=float(np.sqrt(mean_squared_error(test.points,mean))),interval_coverage=float(((test.points>=mean+lo)&(test.points<=mean+hi)).mean()),interval_method='chronological calibration residual 5/95 quantiles; no exchangeability guarantee'))
                 for i,r in enumerate(test.itertuples()):predictions.append(dict(timestamp=str(r.timestamp),target=target,model=name,year=year,version=version,kind='development historical replay',negative=float(prob[i,0]),neutral=float(prob[i,1]),positive=float(prob[i,2]),expected_points=float(mean[i]),median_points=float(mean[i]+median),lower_points=float(mean[i]+lo),upper_points=float(mean[i]+hi),actual_points=r.points,error_points=float(mean[i]-r.points),actual_percent=r.return_pct,expected_percent=float(100*mean[i]/(getattr(r,'close',getattr(r,'percent_reference',np.nan)))),percent_reference_convention='current close for intraday; prior close for premarket estimate'))
         (OUT/'metrics.json').write_text(json.dumps(metrics,indent=2));pd.DataFrame(predictions).to_parquet(OUT/'predictions.parquet',index=False)

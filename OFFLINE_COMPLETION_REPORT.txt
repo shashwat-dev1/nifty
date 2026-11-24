@@ -1,0 +1,24 @@
+24 November 2026
+Approval policy paper-policy-1.0 frozen in Git c72f522 before new future evaluation.
+No retrospective threshold-fitting to approve baseline. Required sample: >=1000 outcomes
+and >=60 days per target after policy/model freeze. Proper scores, day-cluster calibration,
+coverage, width, data provenance, cutoff, freshness and session rules explicit.
+Retrained 96 fitted bundles (8 targets x 3 development years x 4 model types), including
+market/KP/combined classifiers and regressors. Existing 2026 data excluded. Original
+outputs preserved. New outputs archive/movement-v2; full registry MODEL_ARTIFACT_REGISTRY_V2.json.
+Skops serialized preprocessing/classifiers/regressors, SHA256, features, fit/cal cutoffs,
+data fingerprint, residual interval quantiles and software versions persisted. Local
+reload probability/regression equivalence verified at absolute tolerance 1e-10 for every
+bundle. Never deserialize arbitrary foreign artifacts or blindly trust untrusted types.
+Development evaluation metrics: MODEL_COMPARISON_V2.csv. This retraining is not new unseen
+evidence. No model qualifies under newly frozen future-only policy; prospective scheduler
+remains disabled. All artifacts' approval BLOCKED pending eligible sample/calendar/provenance.
+DATA_QUALITY_REPORT.json records source/date/session coverage, invalid OHLC, duplicates,
+missing daily sessions, price conflicts and actual market-index coverage. Internally valid
+candles do not certify identity or calendar. CALENDAR_COVERAGE_REPORT.json explicitly
+retains unknown dates; authoritative historical schedules cannot be reconstructed offline
+from absent candles. External official circular archive collection remains necessary.
+58 backend tests passed; frontend production build passed; paper dashboard browser passed.
+Remaining: complete external calendar/provenance evidence, broader input availability audit,
+per-regime uncertainty and operational policy evaluator, prospective unseen sample. These
+are not all live-market blockers; full offline acceptance is not claimed complete.

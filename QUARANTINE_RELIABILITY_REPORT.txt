@@ -1,0 +1,21 @@
+24 November 2026
+Added trusted-local skops inference for registered baseline/market/KP/combined bundles.
+Checks path, SHA256, known serialization types, exact ordered feature schema. Live elapsed
+features use uninterrupted 31 close observations and original KP calculations at candle time.
+No baseline substitution for unsupported artifact/schema. API validates selected model IDs.
+Runtime ID includes target/year/model; no cross-model idempotency collisions. JSON baseline
+preserved; selected skops models configurable via quarantine_model_ids schedule field.
+Elapsed 15/30/60/120/240 supported under freshness/session/horizon gates. Session generation
+remains BLOCKED pending verified live target/input contracts; no false support claim.
+Cross-day quarantine pending-event retrieval added independently of today's open/closed
+status. Same append-only settlement engine; missing bars remain pending, deterministic
+settlement IDs prevent duplicates. Large pending ranges may still need retry/backoff tuning.
+Dashboard shows all 96 bundle availability states plus quarantine collection/status.
+62 tests pass, production build passes, browser quarantine rendering passes. Genuine
+prospective forecast count remains zero; no test fixtures inserted into production.
+Regime report remains descriptive: 532 groups; MAE uncertainty/baseline comparisons and
+predeclared regime sample policy are not yet complete. Authoritative calendar/source
+certification remain external evidence blockers; 210 early sessions remain missing.
+Frozen approval policy unchanged. APPROVED_PAPER remains disabled. Unknown dates blocked.
+Not complete operational acceptance: session generation, complete regime review, broader
+recovery fault testing and evidence certification remain unfinished.

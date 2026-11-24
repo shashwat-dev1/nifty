@@ -12,7 +12,7 @@ def save(value):
     ROOT.mkdir(exist_ok=True);p=ROOT/'schedule.tmp';p.write_text(json.dumps(value,indent=2));p.replace(ROOT/'schedule.json')
 def tick():
     c=config()
-    if not c['enabled']:return
+    if not c['enabled'] and not c.get('quarantine_enabled',False):return
     now=datetime.now(timezone.utc);local=now.astimezone(ZoneInfo('Asia/Kolkata'))
     # Settlement recovery is independent of whether new forecasts are approved.
     from prediction_log import connection
@@ -25,6 +25,33 @@ def tick():
             p=json.loads(raw);day=datetime.fromisoformat(p['timestamp']).astimezone(ZoneInfo('Asia/Kolkata')).date()
             list(sync_minutes(token(),day,local.date(),None))
         with db() as con:settle(con)
+    if c.get('quarantine_enabled',False):
+        from quarantine import PATH as qpath,collect
+        from custom_api import token,db
+        from market_status import status
+        from upstox_history import sync_minutes
+        from prediction_log import connection
+        with connection(qpath) as ledger:
+            pending_q=ledger.execute("select payload from events f where kind='forecast' and not exists(select 1 from events o where o.id='settlement-'||f.id)").fetchall()
+        for raw, in pending_q:
+            day=datetime.fromisoformat(json.loads(raw)['timestamp']).astimezone(ZoneInfo('Asia/Kolkata')).date()
+            list(sync_minutes(token(),day,local.date(),None))
+        with db() as con:settle(con,path=qpath)
+        if calendar(local.date())['status']=='verified trading':
+            list(sync_minutes(token(),local.date(),local.date(),None))
+            with db() as con:settle(con,path=qpath)
+            if local.strftime('%H:%M') in c['windows']:
+                from bundle_runtime import models
+                selected=c.get('quarantine_model_ids',[])
+                candidates=registry()+[m for m in models() if m['runtime_id'] in selected]
+                errors=[]
+                for m in candidates:
+                    try:collect(m,status(token())['rows'][0],local.strftime('%H:%M'))
+                    except (ValueError,KeyError,TypeError) as exc:errors.append(str(exc))
+                c['quarantine_status']='; '.join(errors) if errors else 'window processed'
+        else:c['quarantine_status']='BLOCKED: session unknown or closed'
+        c['last_check']=now.isoformat();save(c)
+    if not c['enabled']:return
     candidates=[m for m in registry() if not eligibility(m)]
     if not candidates:c['last_status']='blocked: no approved model artifact'
     elif calendar(local.date())['status']!='verified trading':c['last_status']='blocked: session unknown or closed'

@@ -253,14 +253,32 @@ def movement_evaluation(day:date|None=None):
 def paper_status():
     from paper_service import status
     from paper_scheduler import config
-    return {**status(),'schedule':config()}
+    from quarantine import status as quarantine_status
+    return {**status(),'schedule':config(),'quarantine':quarantine_status(),'operational_states':['HISTORICAL_REPLAY','QUARANTINED_PROSPECTIVE','APPROVED_PAPER','BLOCKED']}
+
+@app.post('/api/admin/paper/quarantine/collect')
+def collect_quarantine():
+    from paper_service import registry
+    from market_status import status
+    from quarantine import collect
+    models=registry()
+    if not models:raise HTTPException(409,'No registered model')
+    observation=status(token())['rows'][0]
+    try:key=collect(models[0],observation,datetime.now(IST).strftime('%H:%M'))
+    except (ValueError,TypeError,KeyError) as exc:raise HTTPException(409,str(exc))
+    return {'state':'QUARANTINED_PROSPECTIVE','id':key}
 
 class PaperSchedule(BaseModel):
     enabled:bool=False
+    quarantine_enabled:bool=False
+    quarantine_model_ids:list[str]=Field(default_factory=list,max_length=96)
     windows:list[str]=Field(default_factory=lambda:['09:30','10:00','11:00','12:00','13:00','14:00'],max_length=20)
 
 @app.post('/api/admin/paper/schedule')
 def paper_schedule(body:PaperSchedule):
+    from bundle_runtime import models
+    known={m['runtime_id'] for m in models()}
+    if any(v not in known for v in body.quarantine_model_ids):raise HTTPException(422,'Unknown registered model ID')
     from paper_scheduler import save,config
     for v in body.windows:
         try:clock.fromisoformat(v)

@@ -1,0 +1,16 @@
+{
+  "research_period": "2017-04-03 onward",
+  "verified_entries": {
+    "2026-11-24": {
+      "status": "exchange holiday",
+      "source": "https://nsearchives.nseindia.com/content/circulars/CMTR71775.pdf",
+      "description": "Prakash Gurpurb Sri Guru Nanak Dev",
+      "open": null,
+      "close": null
+    }
+  },
+  "remaining_status": "UNVERIFIED: no complete authoritative historical schedule/circular archive available locally",
+  "closure_inference": "Missing candles never imply exchange closure",
+  "prospective_rule": "Unknown sessions blocked",
+  "offline_limitation": "Authoritative historical facts require external evidence; cannot be completed by inference from candle timestamps"
+}
