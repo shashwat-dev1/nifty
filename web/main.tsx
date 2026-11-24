@@ -365,6 +365,7 @@ function App() {
   const [moment, setMoment] = useState(now());
   const [calculation, setCalculation] = useState<any>();
   const [mode, setMode] = useState("exact");
+  const [historyScope,setHistoryScope]=useState("market");
   const [factors, setFactors] = useState(["moon_star", "moon_sub"]);
   const [planets, setPlanets] = useState(["Moon"]);
   const [start, setStart] = useState("1995-11-03");
@@ -428,7 +429,7 @@ function App() {
         timestamp: calculation.timestamp,
         start,
         end,
-        mode,similarity,weights,
+        mode,similarity,weights,history_scope:historyScope,
         factors,
         planets,
         tolerance,
@@ -443,7 +444,7 @@ function App() {
     },
   });
 
-  const summaryQuery=useQuery({queryKey:['outcome-summary',calculation?.timestamp,matches?.total,mode,factors,planets,start,end,tolerance,low,high,similarity,weights,horizon,neutral],enabled:!!matches&&!!calculation,queryFn:()=>api('statistics',{timestamp:calculation.timestamp,start,end,mode,factors,planets,tolerance,minimum:low,maximum:high,similarity,weights,horizon,neutral})});
+  const summaryQuery=useQuery({queryKey:['outcome-summary',calculation?.timestamp,matches?.total,mode,factors,planets,start,end,tolerance,low,high,similarity,weights,horizon,neutral],enabled:!!matches&&!!calculation,queryFn:()=>api('statistics',{timestamp:calculation.timestamp,start,end,mode,factors,planets,tolerance,minimum:low,maximum:high,similarity,weights,horizon,neutral,history_scope:historyScope})});
   const invoke = async (path: string, body: any) => {
     try {
       setNotice(JSON.stringify(await api(path, body)));
@@ -458,7 +459,7 @@ function App() {
         timestamp: calculation.timestamp,
         start,
         end,
-        mode,similarity,weights,
+        mode,similarity,weights,history_scope:historyScope,
         factors,
         planets,
         tolerance,
@@ -473,7 +474,7 @@ function App() {
     setMatches(null);
     setSelected(null);
     setStats(null);
-  }, [mode, start, end, tolerance, low, high, factors, planets,similarity,weights]);
+  }, [mode, start, end, tolerance, low, high, factors, planets,similarity,weights,historyScope]);
 
   useEffect(() => {
     setStats(null);
@@ -814,12 +815,12 @@ function App() {
                               Moon Star:{" "}
                               <strong>
                                 {calculation.ruling_planets?.moon_star ||
-                                  "Venus"}
+                                  "Unavailable"}
                               </strong>
                             </span>
                             <span>|</span>
                             <span>
-                              Moon Sign:{" "}
+                              Moon Sub: <strong>{calculation.ruling_planets?.moon_sub??'Unavailable'}</strong> · Moon Sign:{" "}
                               <strong>
                                 {calculation.ruling_planets?.moon_sign || "Unavailable"}
                               </strong>
@@ -829,7 +830,7 @@ function App() {
                               Day Lord:{" "}
                               <strong>
                                 {calculation.ruling_planets?.day || "Unavailable"}{" "}
-                                (Friday)
+                                ({calculation.weekday})
                               </strong>
                             </span>
                           </div>
@@ -853,7 +854,7 @@ function App() {
                               </Accordion.Trigger>
                             </Accordion.Header>
                             <Accordion.Content className="p-3 bg-slate-950">
-                              <Table rows={calculation.ruling_details} />
+                              <p>{calculation.day_lord_rule}</p><pre>{JSON.stringify(calculation.moon_subdivision,null,2)}</pre><Table rows={calculation.ruling_details} />
                               <pre className="text-[10px] text-slate-400 mt-2 bg-slate-900 p-2 rounded overflow-x-auto">
                                 {JSON.stringify(
                                   calculation.components,
@@ -907,14 +908,14 @@ function App() {
                 <div className="controls-row-bottom">
 <div className="controls">
 <div style={{display:'flex',gap:8,flexWrap:'wrap',width:'100%'}} aria-label="Quick matching modes"><button type="button" aria-pressed={mode==='exact'} onClick={()=>setMode('exact')}>Exact match · all five lords</button><button type="button" aria-pressed={mode==='partial'} onClick={()=>setMode('partial')}>Partial match · choose lords</button></div>
-<label>Matching method<select aria-label="Matching method" value={mode} onChange={e=>setMode(e.target.value)}>{['exact','partial','sign','nakshatra','pada','star','sub','score','longitude','similarity'].map(m=><option key={m}>{m}</option>)}</select></label>
+<label>Historical universe<select value={historyScope} onChange={e=>setHistoryScope(e.target.value)}><option value="market">Market aligned · actual minute candles</option><option value="astronomical">All astronomical timestamps</option></select></label><p>Market-aligned history requires an actual stored minute candle. Missing sessions are excluded; this is not a complete official exchange calendar.</p><label>Matching method<select aria-label="Matching method" value={mode} onChange={e=>setMode(e.target.value)}>{['exact','partial','sign','nakshatra','pada','star','sub','score','longitude','similarity'].map(m=><option key={m}>{m}</option>)}</select></label>
 <label>Search from<input type="date" value={start} onChange={e=>setStart(e.target.value)}/></label><label>Search through<input type="date" value={end} onChange={e=>setEnd(e.target.value)}/></label>
 {mode==='partial'&&<fieldset style={{padding:12,border:'1px solid #334155'}}><legend>Required ruling lords</legend><p>Select any combination. Only checked lords are required to match.</p>{['day','moon_sign','moon_star','moon_sub','lagna'].map(k=><label key={k} style={{display:'inline-flex',marginRight:16,gap:6}}><input type="checkbox" checked={factors.includes(k)} onChange={e=>setFactors(e.target.checked?[...factors,k]:factors.filter(v=>v!==k))}/>{k.replaceAll('_',' ')}</label>)}</fieldset>}
 {['sign','nakshatra','pada','star','sub','longitude'].includes(mode)&&<label>Selected planets<select multiple value={planets} onChange={e=>setPlanets(Array.from(e.target.selectedOptions,o=>o.value))}>{['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'].map(k=><option key={k}>{k}</option>)}</select></label>}
 {mode==='longitude'&&<label>Angular tolerance degrees<input type="number" min="0" max="180" value={tolerance} onChange={e=>setTolerance(+e.target.value)}/></label>}
 {mode==='score'&&<><label>Minimum score<input type="number" value={low} onChange={e=>setLow(+e.target.value)}/></label><label>Maximum score<input type="number" value={high} onChange={e=>setHigh(+e.target.value)}/></label></>}
 {mode==='similarity'&&<><label>Minimum weighted similarity %<input type="number" min="0" max="100" value={similarity} onChange={e=>setSimilarity(+e.target.value)}/></label><p>100 × sum of matching ruling-lord weights / sum of all five weights. This is categorical similarity, not positional identity.</p>{['day','moon_sign','moon_star','moon_sub','lagna'].map((k,i)=><label key={k}>{k} weight<input type="number" min="0" value={weights[i]} onChange={e=>setWeights(weights.map((w,j)=>j===i?+e.target.value:w))}/></label>)}</>}
-<label>Outcome horizon<select value={horizon} onChange={e=>setHorizon(+e.target.value)}>{[5,15,30,60].map(h=><option key={h} value={h}>{h} minutes</option>)}</select></label>
+<label>Outcome horizon<select value={horizon} onChange={e=>setHorizon(+e.target.value)}>{[5,15,30,60,120,240].map(h=><option key={h} value={h}>{h} minutes</option>)}</select></label>
 <label>Neutral threshold ± percent<input aria-label="Neutral threshold" type="number" min="0" step="0.01" value={neutral} onChange={e=>setNeutral(+e.target.value)}/></label>
 </div>
                   {/* Database Count Tag */}

@@ -1,0 +1,27 @@
+timestamp,weekday,expected_lords,calculated_lords,expected_score,calculated_score,pass
+2026-11-20T09:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",18,18.0,True
+2026-11-20T09:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",18,18.0,True
+2026-11-20T09:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",18,18.0,True
+2026-11-20T10:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",18,18.0,True
+2026-11-20T10:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",8,8.0,True
+2026-11-20T10:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",8,8.0,True
+2026-11-20T10:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']",8,8.0,True
+2026-11-20T11:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",14,14.0,True
+2026-11-20T11:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",14,14.0,True
+2026-11-20T11:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",14,14.0,True
+2026-11-20T11:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",14,14.0,True
+2026-11-20T12:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",14,14.0,True
+2026-11-20T12:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",6,6.0,True
+2026-11-20T12:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",7,7.0,True
+2026-11-20T12:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",-5,-5.0,True
+2026-11-20T13:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",2,2.0,True
+2026-11-20T13:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",2,2.0,True
+2026-11-20T13:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",2,2.0,True
+2026-11-20T13:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",6,6.0,True
+2026-11-20T14:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn')","['Venus', 'Jupiter', 'Saturn', 'Mercury', 'Saturn']",6,6.0,True
+2026-11-20T14:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",-2,-2.0,True
+2026-11-20T14:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",6,6.0,True
+2026-11-20T14:45:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",2,2.0,True
+2026-11-20T15:00:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",-2,-2.0,True
+2026-11-20T15:15:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",-2,-2.0,True
+2026-11-20T15:30:00+05:30,Friday,"('Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter')","['Venus', 'Jupiter', 'Saturn', 'Ketu', 'Jupiter']",-2,-2.0,True

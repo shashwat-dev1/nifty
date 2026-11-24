@@ -71,7 +71,8 @@ class Search(Moment):
     maximum:float=30
     offset:int=Field(0,ge=0)
     limit:int=Field(25,ge=1,le=100)
-    horizon:Literal[5,15,30,60]=15
+    horizon:Literal[5,15,30,60,120,240]=15
+    history_scope:Literal["astronomical","market"]="astronomical"
     neutral:float=Field(0,ge=0,le=10)
     @model_validator(mode="after")
     def valid_range(self):
@@ -114,12 +115,19 @@ def calculate(body:Moment):
     signs=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"]
     names="Ashwini Bharani Krittika Rohini Mrigashira Ardra Punarvasu Pushya Ashlesha Magha Purva-Phalguni Uttara-Phalguni Hasta Chitra Swati Vishakha Anuradha Jyeshtha Mula Purva-Ashadha Uttara-Ashadha Shravana Dhanishta Shatabhisha Purva-Bhadrapada Uttara-Bhadrapada Revati".split()
     result["rows"]=[dict(planet=p,**v,zodiac=signs[int(v["longitude"]/30)],nakshatra_name=names[v["nakshatra"]-1],pada=int((v["longitude"]%(360/27))/(360/108))+1) for p,v in result["positions"].items()]
+    from kp_diagnostics import subdivision
+    result['weekday']=body.timestamp.strftime('%A')
+    result['day_lord_rule']='Gregorian weekday at local midnight in Asia/Kolkata; not sunrise vara, Hora or Rahu Kaal'
+    result['moon_subdivision']=subdivision(chart.longitude('Moon'))
+    result['model']=MODEL
     return result
 def search_rows(con,body,all_rows=False):
     selected=KPChart(body.timestamp)
     kp=selected.calculate()
     clauses=["model=?","lat=?","lon=?","ts<?","ts::DATE BETWEEN ? AND ?"]
     args=[MODEL,LAT,LON,body.timestamp,body.start,body.end]
+    if body.history_scope=="market":
+        clauses.append("EXISTS (SELECT 1 FROM intraday market WHERE market.timestamp=snapshots.ts AND market.interval_minutes=1)")
     for k in (FACTORS if body.mode=="exact" else body.factors if body.mode=="partial" else []):
         clauses.append(f"json_extract_string(details,'$.ruling_planets.{k}')=?")
         args.append(kp["ruling_planets"][k])
@@ -160,7 +168,7 @@ def matches(body:Search):
                 matched_factors=", ".join(k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k])))
         frame=pd.DataFrame(records)
         if len(frame):
-            for h in [5,15,30,60]:
+            for h in [5,15,30,60,120,240]:
                 out=attach_prices(con,frame[["timestamp"]],h)
                 frame["reference"]=out.close
                 frame[f"price_{h}"]=out.exit_price
@@ -277,6 +285,30 @@ def synchronize(body:Generation):
     return job(run)
 @app.get("/api/admin/jobs")
 def jobs():return JOBS
+
+@app.post("/api/admin/index-market")
+def index_market(body:Generation):
+    if body.end<body.start:raise HTTPException(422,'Invalid range')
+    def run():
+        with LOCK,db() as con:
+            times=con.execute("select timestamp from intraday where interval_minutes=1 and timestamp::date between ? and ? order by timestamp",[body.start,body.end]).df().timestamp
+        stride=body.step or 15
+        times=times[(times.dt.hour*60+times.dt.minute)%stride==0]
+        for i in range(0,len(times),128):
+            with LOCK,db(write=True) as con:list(build(con,times.iloc[i:i+128]))
+            yield {'processed':min(i+128,len(times)),'eligible':len(times),'model':MODEL}
+    return job(run)
+
+@app.post("/api/research/outcomes")
+def longer_outcomes(body:Search,outcome:Literal['elapsed','remainder','next_session','next_day_close']='elapsed'):
+    from market_research import outcomes
+    with LOCK,db() as con:
+        count,rows,_=search_rows(con,body)
+        if rows.empty:return {'total':count,'rows':[]}
+        frame=outcomes(con,rows[['timestamp']],outcome,body.horizon)
+    frame['points']=frame.exit_price-frame.close
+    frame['return_percent']=100*(frame.exit_price/frame.close-1)
+    return {'total':count,'definition':outcome,'minutes':body.horizon,'rows':clean(frame)}
 
 @app.post("/api/admin/sync-daily")
 def synchronize_daily(body:Generation):
