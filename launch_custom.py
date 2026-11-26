@@ -8,7 +8,9 @@ def ready():
     try:return requests.get(URL+'/api/health',timeout=1).json().get('status')=='ok'
     except Exception:return False
 if __name__=='__main__':
-    if ready():webbrowser.open(URL);sys.exit(0)
+    if ready():
+        requests.post(URL+'/api/admin/kp/full-day-refresh',json={},timeout=3)
+        webbrowser.open(URL);sys.exit(0)
     if not (ROOT/'web/dist/index.html').exists():
         print('Build frontend first: cd web, npm ci, npm run build');sys.exit(1)
     with subprocess.Popen([sys.executable,'-m','uvicorn','custom_api:app','--host','127.0.0.1','--port','8520'],cwd=ROOT) as child:

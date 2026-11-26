@@ -82,7 +82,7 @@ class SessionGate:
             return await reject(401)
         if ws:return await reject(403)
         if path.startswith("/api/admin") or path=="/api/backtest":return await reject(403)
-        allowed_get=path in ("/","/demo","/api/health","/api/coverage","/api/upstox","/api/studies","/api/candles","/api/timeline","/api/market") or (path.startswith("/assets/") and ".." not in path)
+        allowed_get=path in ("/","/demo","/api/health","/api/coverage","/api/upstox","/api/studies","/api/candles","/api/timeline","/api/market","/api/historical-forecast","/api/daily-research","/api/kp/slot-matches","/api/trajectory-metrics") or (path.startswith("/assets/") and ".." not in path)
         allowed_post=path in ("/api/calculate","/api/matches","/api/statistics","/api/feedback")
         if scope["method"] in ("GET","HEAD") and not allowed_get:return await reject(404)
         if scope["method"] not in ("GET","HEAD"):

@@ -10,3 +10,35 @@ verification/
 *.zip
 .env*
 *.log
+
+# Hosting metadata and local-only historical audit material
+.vercel/
+*.xlsm
+*.xlsx
+*.parquet
+*.skops
+*.joblib
+*.pkl
+*.pickle
+*.pem
+*.key
+coverage/
+htmlcov/
+node_modules/
+Thumbs.db
+.DS_Store
+
+# Generated reports and superseded visual references remain local
+*_REPORT.txt
+*_RESULTS.csv
+*_REVIEW.json
+*_COMPARISONS.json
+*_UNCERTAINTY.json
+*_LEDGER.json
+*_EVALUATION.json
+*_HANDOFF.txt
+UI/
+TODAY_WORKBOOK_COMPARISON.csv
+TODAY_WORKBOOK_FINDINGS.txt
+DASHBOARD_CORRECTION_REPORT.txt
+FULL_DAY_KP_ARCHIVE_README.txt

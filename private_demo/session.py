@@ -75,6 +75,10 @@ def owner_preflight(origin,password):
     require(http.get(origin+"/",headers=headers,allow_redirects=False,timeout=5).status_code==303,"demo redirect")
     require(http.get(origin+"/demo",headers=headers,timeout=5).status_code==200,"frontend")
     require(http.get(origin+"/api/health",headers=headers,timeout=5).json()["status"]=="ok","API health")
+    daily=http.get(origin+'/api/daily-research?day=2026-11-25',headers=headers,timeout=20)
+    require(daily.status_code==200 and len(daily.json().get('timeline',[]))==26,'full-day KP movement')
+    slots=http.get(origin+'/api/kp/slot-matches?timestamp=2026-11-25T12:30:00%2B05:30',headers=headers,timeout=30)
+    require(slots.status_code==200 and 'total' in slots.json(),'exact six-factor slot matching')
     for path in ["/api/admin/feedback","/api/admin/sync","/api/admin/import","/api/admin/jobs","/api/backtest"]:
         require(http.get(origin+path,headers=headers,timeout=5).status_code==403,"admin denied "+path)
         require(http.post(origin+path,headers={**headers,"Origin":origin},json={},timeout=5).status_code==403,"admin writes denied "+path)

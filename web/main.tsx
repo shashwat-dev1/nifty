@@ -36,6 +36,7 @@ import { ProjectionChart } from "./ProjectionChart";
 import { Research, FeedbackForm } from "./Research";
 import { Timeline, Import, Lab } from "./Extras";
 import {PaperPredictions} from "./PaperPredictions";
+import {DailyTerminal} from "./DailyTerminal";
 import {ResearchWorkspace} from "./ResearchWorkspace";
 import {OutcomeSummary} from "./OutcomeSummary";
 import {
@@ -363,7 +364,7 @@ function Table({
 }
 
 function App() {
-  const [page, setPage] = useState("Match explorer");
+  const [page, setPage] = useState("Daily Research");
   const [moment, setMoment] = useState(now());
   const [calculation, setCalculation] = useState<any>();
   const [mode, setMode] = useState("exact");
@@ -657,7 +658,9 @@ function App() {
           )}
 
 {!demo&&page==='Prospective Predictions'&&<PaperPredictions Table={Table}/>}
-{!demo&&['Daily Research','Model Evaluation'].includes(page)&&<ResearchWorkspace daily={page==='Daily Research'} Table={Table}/>}
+{page==='Daily Research'&&<DailyTerminal Table={Table}/>}
+{!demo&&page==='Predictions'&&<ResearchWorkspace daily={false} Table={Table}/>}
+{!demo&&page==='Model Evaluation'&&<ResearchWorkspace daily={false} Table={Table}/>} 
           {/* ACTIVE VIEW: PLANETARY MATCH EXPLORER */}
           {page === "Match explorer" && (
             <>

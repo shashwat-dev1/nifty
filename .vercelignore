@@ -1,0 +1,16 @@
+.git
+.venv
+**/node_modules
+archive
+verification
+UI
+tests
+**/__pycache__
+.pytest_cache
+*.sqlite3
+*.duckdb*
+*.zip
+*.xlsm
+*.xlsx
+.env*
+*.log

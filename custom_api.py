@@ -61,7 +61,7 @@ class Moment(BaseModel):
 class Search(Moment):
     start:date=date(1995,11,3)
     end:date=date(2026,11,19)
-    mode:Literal["exact","partial","sign","nakshatra","pada","star","sub","score","longitude","similarity"]="exact"
+    mode:Literal["exact","exact_score","partial","sign","nakshatra","pada","star","sub","score","longitude","similarity"]="exact"
     similarity:float=Field(80,ge=0,le=100)
     weights:list[float]=Field(default_factory=lambda:[1,1,1,1,1],min_length=5,max_length=5)
     factors:list[Literal["day","moon_sign","moon_star","moon_sub","lagna"]]=FACTORS
@@ -72,6 +72,7 @@ class Search(Moment):
     offset:int=Field(0,ge=0)
     limit:int=Field(25,ge=1,le=100)
     horizon:Literal[5,15,30,60,120,240]=15
+    completed_before:bool=False
     history_scope:Literal["astronomical","market"]="astronomical"
     neutral:float=Field(0,ge=0,le=10)
     @model_validator(mode="after")
@@ -126,11 +127,17 @@ def search_rows(con,body,all_rows=False):
     kp=selected.calculate()
     clauses=["model=?","lat=?","lon=?","ts<?","ts::DATE BETWEEN ? AND ?"]
     args=[MODEL,LAT,LON,body.timestamp,body.start,body.end]
+    if body.completed_before:
+        clauses.append("ts+?*INTERVAL '1 minute'<=?")
+        args.extend([body.horizon,body.timestamp])
     if body.history_scope=="market":
         clauses.append("EXISTS (SELECT 1 FROM intraday market WHERE market.timestamp=snapshots.ts AND market.interval_minutes=1)")
-    for k in (FACTORS if body.mode=="exact" else body.factors if body.mode=="partial" else []):
+    for k in (FACTORS if body.mode in ("exact","exact_score") else body.factors if body.mode=="partial" else []):
         clauses.append(f"json_extract_string(details,'$.ruling_planets.{k}')=?")
         args.append(kp["ruling_planets"][k])
+    if body.mode=="exact_score":
+        clauses.append("CAST(json_extract(details,'$.kp_score') AS DOUBLE)=?")
+        args.append(kp['kp_score'])
     if body.mode=="score":
         clauses.append("CAST(json_extract(details,'$.kp_score') AS DOUBLE) BETWEEN ? AND ?")
         args.extend([body.minimum,body.maximum])
@@ -163,9 +170,9 @@ def matches(body:Search):
         for r in rows.itertuples():
             detail=json.loads(r.details)
             records.append(dict(timestamp=r.timestamp,score=detail["kp_score"],**detail["ruling_planets"],
-                matched=sum(detail["ruling_planets"][k]==kp["ruling_planets"][k] for k in FACTORS),
+                matched=sum(detail["ruling_planets"][k]==kp["ruling_planets"][k] for k in FACTORS)+(int(detail["kp_score"]==kp["kp_score"]) if body.mode=="exact_score" else 0),
                 differences=", ".join(k for k in FACTORS if detail["ruling_planets"][k]!=kp["ruling_planets"][k]),category=body.mode,similarity=100*sum(w for k,w in zip(FACTORS,body.weights) if detail["ruling_planets"][k]==kp["ruling_planets"][k])/sum(body.weights) if body.mode=="similarity" else None,
-                matched_factors=", ".join(k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k])))
+                matched_factors=", ".join([k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if body.mode=="exact_score" and detail["kp_score"]==kp["kp_score"] else []))))
         frame=pd.DataFrame(records)
         if len(frame):
             for h in [5,15,30,60,120,240]:
@@ -204,6 +211,29 @@ def statistics(body:Search):
         "median_points":float(points.median()) if len(points) else None,
         "average_percent":float(values.mean()) if len(values) else None,
         "observed_positive_frequency":float((values>body.neutral).mean()) if len(values) else None}
+@app.get('/api/kp/slot-matches')
+def exact_slot_matches(timestamp:datetime,offset:int=0,limit:int=25):
+    if timestamp.tzinfo is None:raise HTTPException(422,'Timezone required')
+    if offset<0 or not 1<=limit<=100:raise HTTPException(422,'Invalid pagination')
+    from full_day_archive import slot_search
+    with LOCK:
+        result=slot_search(timestamp)
+        page=result['rows'][offset:offset+limit]
+        with db() as con:
+            for row in page:
+                t=datetime.fromisoformat(row['timestamp']);end=t+timedelta(minutes=15)
+                fresh=KPChart(t).calculate()
+                for archive_key,engine_key in zip(['day_lord','moon_sign_lord','moon_star_lord','moon_sub_lord','lagna_lord'],FACTORS):
+                    if row.get(archive_key)!=fresh['ruling_planets'][engine_key]:raise HTTPException(409,'Historical slot failed fresh KP verification; archive requires rebuilding')
+                if row.get('kp_score')!=fresh['kp_score']:raise HTTPException(409,'Historical score failed fresh KP verification; archive requires rebuilding')
+                row['verification']='Recalculated: 6/6 agree'
+
+                bars=con.execute('SELECT timestamp,open,close FROM intraday WHERE timestamp>? AND timestamp<=? AND timestamp::DATE=? AND interval_minutes=1 ORDER BY timestamp',[t,end,t.date()]).fetchall()
+                complete=len(bars)==15 and all(b[0]==t+timedelta(minutes=i+1) and b[1] is not None and b[2] is not None for i,b in enumerate(bars))
+                row.update(slot_end=end.isoformat(),minute_candles=len(bars),market_data='Complete' if complete else 'Incomplete' if bars else 'Unavailable',slot_open=float(bars[0][1]) if complete else None,slot_close=float(bars[-1][2]) if complete else None)
+        result.update(rows=page,offset=offset,limit=limit)
+    return result
+
 @app.get("/api/candles",response_model=CandleResponse)
 def candles(timestamp:datetime,interval:int=1):
     if interval not in (1,5,15):raise HTTPException(422,"Unsupported candle interval")
@@ -242,12 +272,25 @@ def ml_evaluation():
     return {'status':'historical replay only','metrics':json.loads((OUT/'metrics.json').read_text()),'predictions':clean(frame.tail(500)),'calibration':json.loads((OUT/'calibration.json').read_text()) if (OUT/'calibration.json').exists() else []}
 
 @app.get('/api/ml/movement')
-def movement_evaluation(day:date|None=None):
+def movement_evaluation(day:date|None=None,target:str|None=None,model_name:str|None=None):
     from movement_models import OUT
     if not (OUT/'metrics.json').exists():return {'metrics':[],'predictions':[],'status':'Prediction unavailable'}
     frame=pd.read_parquet(OUT/'predictions.parquet')
     if day is not None:frame=frame[pd.to_datetime(frame.timestamp,utc=True).dt.tz_convert(IST).dt.date==day]
+    if target is not None:frame=frame[frame.target==target]
+    if model_name is not None:frame=frame[frame.model==model_name]
     return {'metrics':json.loads((OUT/'metrics.json').read_text()),'predictions':clean(frame.tail(500)),'status':'Development replay only; 2026 excluded'}
+
+@app.get('/api/trajectory-metrics')
+def trajectory_metrics():
+    path=ROOT/'archive/trajectory/metrics.json'
+    return {'rows':json.loads(path.read_text()) if path.exists() else []}
+
+@app.get('/api/historical-forecast')
+def historical_forecast(timestamp:datetime,model:Literal['baseline','market','kp','combined','analog']='market',horizon:int=60):
+    from historical_forecast import forecast
+    if horizon not in (15,30,60,120,240):raise HTTPException(422,'Endpoint overlay supports elapsed horizons only')
+    with LOCK:return json.loads(json.dumps(forecast(timestamp,model,horizon),default=lambda v:v.item() if isinstance(v,np.generic) else str(v)))
 
 @app.get('/api/admin/paper')
 def paper_status():
@@ -307,13 +350,33 @@ def daily_research(day:date):
     with LOCK,db() as con:
         bars=con.execute('select timestamp,open,high,low,close from intraday where timestamp::date=? order by timestamp',[day]).df()
         features=con.execute('select ts timestamp,details from snapshots where ts::date=? and model=? order by ts',[day,MODEL]).df()
-    transitions=[];previous=None
-    for row in features.itertuples():
-        d=json.loads(row.details);state=(d['kp_score'],d['signature'])
-        if state!=previous:transitions.append({'timestamp':row.timestamp,'score':d['kp_score'],**d['ruling_planets']});previous=state
+    from kp_engine import slots
+    transitions=[];previous=None;timeline=[]
+    with LOCK:
+        for stamp in slots(day):
+            d=KPChart(stamp).calculate()
+            item={'timestamp':stamp,'score':d['kp_score'],**d['ruling_planets'],**d['components']}
+            timeline.append(item)
+            state=(d['kp_score'],d['signature'])
+            if state!=previous:transitions.append(item);previous=state
     from paper_service import status as paper_records
     forecasts=[r for r in paper_records()['predictions'] if r['kind']=='prospective paper' and pd.Timestamp(r['timestamp']).tz_convert(IST).date()==day]
-    return {'predictions':forecasts,'candles':clean(bars),'transitions':clean(pd.DataFrame(transitions)),'model':MODEL,'coverage':'Stored observations; session completeness is not certified'}
+    return {'timeline':clean(pd.DataFrame(timeline)),'predictions':forecasts,'candles':clean(bars),'transitions':clean(pd.DataFrame(transitions)),'model':MODEL,'coverage':'KP timeline calculated for selected date independently of market-data availability; 15-minute samples, not exact transition instants'}
+
+@app.get('/api/kp/full-day-matches')
+def full_day_matches(day:date):
+    from full_day_archive import search
+    with LOCK:return search(day)
+
+@app.on_event('startup')
+def update_full_day_archive():
+    import subprocess,sys
+    subprocess.Popen([sys.executable,'-m','full_day_archive'],cwd=ROOT,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW)
+
+@app.post('/api/admin/kp/full-day-refresh')
+def refresh_full_day_archive():
+    update_full_day_archive()
+    return {'status':'catch-up requested; existing worker is preserved'}
 @app.post("/api/admin/upstox/test")
 def broker_test():
     from upstox_history import verify_instrument,fetch

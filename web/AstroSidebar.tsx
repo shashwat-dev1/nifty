@@ -44,12 +44,13 @@ export function AstroSidebar({
   const aspects = calculateAspectMatrix(calculation?.positions);
 
   const pages = demo
-    ? ["Match explorer", "KP calculator", "Intraday timeline", "Feedback"]
+    ? ["Daily Research", "Match explorer", "KP calculator", "Intraday timeline", "Feedback"]
     : [
-        "Match explorer",
-        "KP calculator",
-        "Intraday timeline",
         "Daily Research",
+        "KP calculator",
+        "Match explorer",
+        "Intraday timeline",
+        "Predictions",
         "Model Evaluation",
         "Prospective Predictions",
         "Overview",
@@ -139,7 +140,7 @@ export function AstroSidebar({
       <div className="sidebar-nav-card">
         <div className="panel-card-title">RESEARCH WORKSPACES</div>
         <div className="sidebar-nav-links">
-          {pages.map((p) => {
+          {pages.filter(p=>["Daily Research","KP calculator","Match explorer"].includes(p)).map((p) => {
             const Icon = getIcon(p);
             const isActive = activePage === p;
             return (
@@ -157,6 +158,7 @@ export function AstroSidebar({
         </div>
       </div>
 
+      <details style={{padding:10,color:'#657387'}}><summary>Advanced</summary>{pages.filter(p=>!['Daily Research','KP calculator','Match explorer'].includes(p)).map(p=><button key={p} onClick={()=>onNavigate(p)} style={{display:'block',padding:8,fontSize:12}}>{p}</button>)}</details>
       {/* Bottom Ephemeris Details */}
       <div className="sidebar-footer-card">
         <div className="ephemeris-title">SWISS EPHEMERIS V2.10</div>
