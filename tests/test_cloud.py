@@ -47,3 +47,19 @@ def test_snapshot_builder_copies_database_consistently(tmp_path,monkeypatch):
     output=tmp_path/'snapshot.zip';digest=snapshot.build(output)
     restore(output,digest,tmp_path/'restored')
     with duckdb.connect(str(tmp_path/'restored/archive/research.duckdb')) as con:assert con.execute('select value from example').fetchone()==(7,)
+
+def test_firestore_chunk_round_trip_and_missing_chunk(tmp_path,monkeypatch):
+    import cloud_firebase as f
+    records={}
+    def memory(path,value=None):
+        if value is not None:records[path]=value
+        return records.get(path)
+    monkeypatch.setattr(f,'document',memory)
+    source=tmp_path/'source.zip';source.write_bytes(b'isolated-fixture'*40000)
+    result=f.upload_snapshot(source,'fixture-v1')
+    assert result['chunks']==2
+    output=tmp_path/'restored.zip';f.download_snapshot(output,'fixture-v1')
+    assert output.read_bytes()==source.read_bytes()
+    assert all(len(v.get('data',''))<1048576 for v in records.values())
+    del records['research_snapshots/fixture-v1/chunks/000000']
+    with pytest.raises(ValueError,match='missing'):f.download_snapshot(output,'fixture-v1')
