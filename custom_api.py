@@ -36,6 +36,9 @@ app.add_middleware(TrustedHostMiddleware,allowed_hosts=os.getenv("NIFTY_ALLOWED_
 def db(write=False):
     con=duckdb.connect(str(DB))
     con.execute("SET TimeZone='Asia/Kolkata'")
+    if os.getenv("NIFTY_CLOUD")=="1":
+        con.execute("SET memory_limit='128MB'")
+        con.execute("SET threads=1")
     if not write:con.execute("BEGIN TRANSACTION READ ONLY")
     return con
 def clean(df):return json.loads(df.to_json(orient="records",date_format="iso"))
