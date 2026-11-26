@@ -1,0 +1,13 @@
+.git
+.venv
+archive
+verification
+web/node_modules
+web/dist
+UI
+**/__pycache__
+.env*
+*.zip
+*.sqlite3
+*.duckdb*
+*.log

@@ -32,7 +32,7 @@ def save_jobs():
         temporary.write_text(json.dumps(JOBS),encoding="utf-8")
         temporary.replace(JOB_FILE)
 app=FastAPI(title="NIFTY KP Terminal",docs_url=None,redoc_url=None,openapi_url=None)
-app.add_middleware(TrustedHostMiddleware,allowed_hosts=["127.0.0.1","localhost","testserver"])
+app.add_middleware(TrustedHostMiddleware,allowed_hosts=os.getenv("NIFTY_ALLOWED_HOSTS","127.0.0.1,localhost,testserver").split(","))
 def db(write=False):
     con=duckdb.connect(str(DB))
     con.execute("SET TimeZone='Asia/Kolkata'")
@@ -40,6 +40,7 @@ def db(write=False):
     return con
 def clean(df):return json.loads(df.to_json(orient="records",date_format="iso"))
 def token():
+    if os.getenv("NIFTY_CLOUD")=="1":return os.getenv("UPSTOX_ACCESS_TOKEN")
     from keyring.backends.Windows import WinVaultKeyring
     return os.getenv("UPSTOX_ACCESS_TOKEN") or WinVaultKeyring().get_password("NIFTY KP Terminal","Upstox")
 @app.middleware("http")
@@ -331,6 +332,7 @@ def paper_schedule(body:PaperSchedule):
 
 @app.on_event('startup')
 def start_paper_worker():
+    if os.getenv("NIFTY_CLOUD")=="1":return
     from paper_scheduler import start
     start()
 
@@ -370,6 +372,7 @@ def full_day_matches(day:date):
 
 @app.on_event('startup')
 def update_full_day_archive():
+    if os.getenv("NIFTY_CLOUD")=="1":return  # Snapshot updates are published explicitly.
     import subprocess,sys
     subprocess.Popen([sys.executable,'-m','full_day_archive'],cwd=ROOT,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW)
 
@@ -467,6 +470,9 @@ def cancel(key:str):
     return {"status":"cancellation requested"}
 @app.post("/api/feedback")
 def feedback(body:Feedback):
+    if os.getenv("NIFTY_CLOUD")=="1":
+        from cloud_firebase import save_feedback
+        return save_feedback(body.model_dump())
     import sqlite3
     from datetime import timezone
     from contextlib import closing

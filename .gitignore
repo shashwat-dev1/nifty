@@ -42,3 +42,9 @@ TODAY_WORKBOOK_COMPARISON.csv
 TODAY_WORKBOOK_FINDINGS.txt
 DASHBOARD_CORRECTION_REPORT.txt
 FULL_DAY_KP_ARCHIVE_README.txt
+
+# Firebase service-account credentials (server only)
+*service*account*.json
+*firebase*adminsdk*.json
+*.sha256
+web/dist-cloud/

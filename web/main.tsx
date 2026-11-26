@@ -36,6 +36,7 @@ import { ProjectionChart } from "./ProjectionChart";
 import { Research, FeedbackForm } from "./Research";
 import { Timeline, Import, Lab } from "./Extras";
 import {PaperPredictions} from "./PaperPredictions";
+import {CloudWake} from './CloudWake';
 import {DailyTerminal} from "./DailyTerminal";
 import {ResearchWorkspace} from "./ResearchWorkspace";
 import {OutcomeSummary} from "./OutcomeSummary";
@@ -1420,6 +1421,6 @@ function App() {
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={new QueryClient()}>
-    <App />
+    <CloudWake><App /></CloudWake>
   </QueryClientProvider>,
 );
