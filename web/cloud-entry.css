@@ -1,0 +1,33 @@
+/* Isolated from legacy terminal controls and global layout rules. */
+.cloud-entry{position:fixed;inset:0;z-index:10;display:grid;place-items:center;overflow:auto;box-sizing:border-box;padding:40px 24px;background:#f1f4f7;color:#243449;font-family:"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.5;color-scheme:light}
+.cloud-entry *{box-sizing:border-box}
+.cloud-entry .cloud-entry-layout{width:100%;max-width:432px;margin:auto}
+.cloud-entry .cloud-entry-brand{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 28px;color:#23384c;font-size:16px;font-weight:600;letter-spacing:-.2px}
+.cloud-entry .cloud-entry-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:9px;background:#223e53;color:#fff}
+.cloud-entry .cloud-entry-brand-divider{margin:0 5px;color:#a6b1bb;font-weight:400}
+.cloud-entry .cloud-entry-card{padding:34px 32px 28px;background:#fff;border:1px solid #dce3e9;border-radius:12px;box-shadow:0 12px 36px #2034470a}
+.cloud-entry .cloud-entry-tag{display:flex;align-items:center;gap:6px;color:#6b7b87;font-size:12px;margin-bottom:22px}
+.cloud-entry h1{margin:0 0 10px;color:#203448;font-size:27px;font-weight:600;line-height:1.2;letter-spacing:-.7px}
+.cloud-entry .cloud-entry-description{margin:0 0 28px;color:#647482;font-size:14px;line-height:1.7}
+.cloud-entry form{display:block;margin:0}
+.cloud-entry .cloud-entry-label{display:block;margin:0 0 8px;font-weight:600;font-size:13px;color:#334b5d}
+.cloud-entry .cloud-entry-password{position:relative;display:flex;align-items:center}
+.cloud-entry .cloud-entry-password input{display:block;width:100%;height:48px;padding:0 48px 0 13px;border:1px solid #bfcdd8;border-radius:6px;background:#fff;color:#203448;font:400 14px "Segoe UI",Arial,sans-serif;outline:none;box-shadow:none}
+.cloud-entry .cloud-entry-password input::placeholder{color:#8b98a3;opacity:1}
+.cloud-entry .cloud-entry-password input:focus{border-color:#476d8a;box-shadow:0 0 0 3px #4f769b1a}
+.cloud-entry .cloud-entry-password input[aria-invalid=true]{border-color:#b95555}
+.cloud-entry button{font:600 14px "Segoe UI",Arial,sans-serif;cursor:pointer;border:0;text-transform:none;letter-spacing:0;min-height:44px}
+.cloud-entry .cloud-entry-reveal{position:absolute;right:3px;top:2px;display:grid;place-items:center;width:42px;height:44px;padding:0;background:transparent;color:#72828f;border-radius:4px}
+.cloud-entry .cloud-entry-reveal:hover{color:#233f54;background:#f2f5f7}
+.cloud-entry .cloud-entry-submit{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:48px;margin:18px 0 0;padding:0 16px;border-radius:6px;background:#223e53;color:#fff;transition:background .15s}
+.cloud-entry .cloud-entry-submit:hover{background:#152f43}
+.cloud-entry .cloud-entry-submit:disabled{opacity:.65;cursor:wait}
+.cloud-entry button:focus-visible{outline:3px solid #7599b9;outline-offset:3px}
+.cloud-entry .cloud-entry-help{margin:20px 0 0;font-size:12px;line-height:1.7;color:#7b8995}
+.cloud-entry .cloud-entry-error{margin:10px 0 0;font-size:13px;color:#a23f3f;line-height:1.5}
+.cloud-entry .cloud-entry-footer{display:flex;justify-content:center;gap:10px;margin:22px 0 0;font-size:12px;color:#86929d}
+.cloud-entry .cloud-entry-status{display:flex;align-items:center;gap:12px;padding:15px;background:#f4f7f9;border:1px solid #e0e7ec;border-radius:6px;font-size:13px;color:#3c586d}
+.cloud-entry-spin{animation:cloud-entry-rotate 1.2s linear infinite;flex-shrink:0}
+@keyframes cloud-entry-rotate{to{transform:rotate(360deg)}}
+@media(max-width:480px){.cloud-entry{padding:24px 18px}.cloud-entry .cloud-entry-card{padding:28px 22px 24px}.cloud-entry h1{font-size:25px}.cloud-entry .cloud-entry-brand{margin-bottom:24px}}
+@media(prefers-reduced-motion:reduce){.cloud-entry-spin{animation:none}.cloud-entry .cloud-entry-submit{transition:none}}
