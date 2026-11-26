@@ -34,3 +34,16 @@ assert c.get('/custom_api.py',headers={'Authorization':'Bearer '+ 'x'*40}).statu
 """
  env={**os.environ,'BACKEND_API_KEY':'x'*40,'NIFTY_CLOUD':'1'}
  subprocess.run([os.sys.executable,'-c',code],env=env,check=True,capture_output=True)
+
+def test_snapshot_builder_copies_database_consistently(tmp_path,monkeypatch):
+    import cloud_snapshot as snapshot
+    import full_day_archive as archive
+    import duckdb,sqlite3,zipfile
+    root=tmp_path/'project';folder=root/'archive/full-day-kp/version';folder.mkdir(parents=True)
+    with duckdb.connect(str(root/'archive/research.duckdb')) as con:
+        con.execute('create table example(value int)');con.execute('insert into example values (7)')
+    con=sqlite3.connect(folder/'index.sqlite3');con.execute('create table days(day text)');con.execute("insert into days values ('2023-01-04')");con.commit();con.close()
+    monkeypatch.setattr(snapshot,'ROOT',root);monkeypatch.setattr(archive,'folder',lambda:folder)
+    output=tmp_path/'snapshot.zip';digest=snapshot.build(output)
+    restore(output,digest,tmp_path/'restored')
+    with duckdb.connect(str(tmp_path/'restored/archive/research.duckdb')) as con:assert con.execute('select value from example').fetchone()==(7,)

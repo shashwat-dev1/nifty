@@ -7,16 +7,23 @@ ROOT=Path(__file__).resolve().parent
 def build(output):
     from full_day_archive import folder
     # DuckDB exclusive writer lock fails if another process owns the database.
-    with duckdb.connect(str(ROOT/'archive/research.duckdb')) as con:
-        con.execute('CHECKPOINT')
-        with tempfile.TemporaryDirectory() as temporary:
-            copy=Path(temporary)/'index.sqlite3'
-            with sqlite3.connect(folder()/'index.sqlite3') as source,sqlite3.connect(copy) as target:source.backup(target)
-            with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=4) as z:
-                z.write(ROOT/'archive/research.duckdb','archive/research.duckdb')
-                z.write(copy,str((folder()/'index.sqlite3').relative_to(ROOT)).replace('\\','/'))
-                for p in [folder()/'progress.json',ROOT/'archive/paper/verified-sessions.json']:
-                    if p.is_file():z.write(p,p.relative_to(ROOT).as_posix())
+    from contextlib import closing
+    with tempfile.TemporaryDirectory() as temporary:
+        copied_db=Path(temporary)/'research.duckdb'
+        with duckdb.connect(str(ROOT/'archive/research.duckdb')) as con:
+            con.execute('CHECKPOINT')
+            current=con.execute('select current_database()').fetchone()[0].replace('"','""')
+            con.execute("ATTACH '"+str(copied_db).replace("'","''")+"' AS cloud_copy")
+            con.execute('COPY FROM DATABASE "'+current+'" TO cloud_copy')
+            con.execute('DETACH cloud_copy')
+        copy=Path(temporary)/'index.sqlite3'
+        with closing(sqlite3.connect(folder()/'index.sqlite3')) as source,closing(sqlite3.connect(copy)) as target:
+            source.backup(target)
+        with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=4) as z:
+            z.write(copied_db,'archive/research.duckdb')
+            z.write(copy,str((folder()/'index.sqlite3').relative_to(ROOT)).replace('\\','/'))
+            for p in [folder()/'progress.json',ROOT/'archive/paper/verified-sessions.json']:
+                if p.is_file():z.write(p,p.relative_to(ROOT).as_posix())
     with open(output,'rb') as f:digest=hashlib.file_digest(f,'sha256').hexdigest()
     Path(str(output)+'.sha256').write_text(digest)
     return digest
