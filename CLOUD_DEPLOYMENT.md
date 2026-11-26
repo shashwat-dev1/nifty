@@ -8,7 +8,7 @@ Vercel root directory: `web`. Set `VITE_CLOUD=1`. The same-origin Node gateway c
 
 Opening the site asks for a password and then wakes Render with health requests. Each request is bounded; retries stop after five minutes or successful readiness. Closing the page cancels polling. There is no idle keep-alive service.
 
-Firestore rules deny browser access. Server credentials use IAM and must remain outside source code. Feedback is durable in `research_feedback`. Historical snapshots use 384 KiB binary chunks encoded below the document-size limit, with a manifest published last. The compressed snapshot budget is 128 MiB. Every cold start consumes one manifest read and one read per chunk. Free-tier suitability depends on measured snapshot size and restart frequency; it is not unlimited.
+Firestore rules deny browser access. Server credentials use IAM and must remain outside source code. Feedback is durable in `research_feedback`. Historical snapshots use 128 KiB binary chunks encoded below the document-size limit, with a manifest published last. The compressed snapshot budget is 128 MiB. Every cold start consumes one manifest read and one read per chunk. Free-tier suitability depends on measured snapshot size and restart frequency; it is not unlimited.
 
 ## Prepare private data
 

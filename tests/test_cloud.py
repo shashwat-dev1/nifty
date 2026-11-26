@@ -57,7 +57,7 @@ def test_firestore_chunk_round_trip_and_missing_chunk(tmp_path,monkeypatch):
     monkeypatch.setattr(f,'document',memory)
     source=tmp_path/'source.zip';source.write_bytes(b'isolated-fixture'*40000)
     result=f.upload_snapshot(source,'fixture-v1')
-    assert result['chunks']==2
+    assert result['chunks']==5
     output=tmp_path/'restored.zip';f.download_snapshot(output,'fixture-v1')
     assert output.read_bytes()==source.read_bytes()
     assert all(len(v.get('data',''))<1048576 for v in records.values())

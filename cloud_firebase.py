@@ -3,7 +3,7 @@ import os,json,base64,hashlib,math
 import threading
 from concurrent.futures import ThreadPoolExecutor
 _local=threading.local()
-CHUNK=384*1024
+CHUNK=128*1024
 def connection():
     if hasattr(_local,"connection"):return _local.connection
     from google.oauth2 import service_account
@@ -49,7 +49,7 @@ def upload_snapshot(path,identifier):
     return {'sha256':digest,'chunks':count,'bytes':path.stat().st_size}
 def download_snapshot(path,identifier):
     ref='research_snapshots/'+identifier;meta=document(ref)
-    if not meta or meta.get('complete') is not True or not 0<meta.get('chunks',0)<=342 or not 0<meta.get('bytes',0)<=128*1024*1024:raise ValueError('Snapshot manifest unavailable or exceeds budget')
+    if not meta or meta.get('complete') is not True or not 0<meta.get('chunks',0)<=1024 or not 0<meta.get('bytes',0)<=128*1024*1024:raise ValueError('Snapshot manifest unavailable or exceeds budget')
     def get(index):
         value=document(ref+'/chunks/'+str(index).zfill(6))
         if not value:raise ValueError('Snapshot chunk missing')

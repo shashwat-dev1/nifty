@@ -70,6 +70,7 @@ async function api(path: string, body?: any) {
 }
 
 const demo =
+  import.meta.env.VITE_CLOUD === '1' ||
   location.pathname.startsWith("/demo") ||
   location.hostname.endsWith(".trycloudflare.com");
 
