@@ -174,12 +174,12 @@ def matches(body:Search):
         records=[]
         for r in rows.itertuples():
             detail=json.loads(r.details)
-            required=body.factors if body.mode=="partial" else [*FACTORS,"kp_score"] if body.mode=="exact_score" else FACTORS
+            required=body.factors if body.mode=="partial" else [*FACTORS,"kp_score"] if body.mode=="exact_score" else FACTORS if body.mode=="exact" else []
             agrees=lambda k: detail['kp_score']==kp['kp_score'] if k=='kp_score' else detail['ruling_planets'][k]==kp['ruling_planets'][k]
             records.append(dict(timestamp=r.timestamp,score=detail["kp_score"],**detail["ruling_planets"],required_factors=", ".join(required),required_matched=sum(agrees(k) for k in required),required_total=len(required),
                 matched=sum(detail["ruling_planets"][k]==kp["ruling_planets"][k] for k in FACTORS)+(int(detail["kp_score"]==kp["kp_score"]) if body.mode=="exact_score" else 0),
                 differences=", ".join(k for k in FACTORS if detail["ruling_planets"][k]!=kp["ruling_planets"][k]),category=body.mode,similarity=100*sum(w for k,w in zip(FACTORS,body.weights) if detail["ruling_planets"][k]==kp["ruling_planets"][k])/sum(body.weights) if body.mode=="similarity" else None,
-                matched_factors=", ".join([k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if (body.mode=="exact_score" or body.mode=="partial" and "kp_score" in body.factors) and detail["kp_score"]==kp["kp_score"] else []))))
+                matched_factors=", ".join([k for k in (body.factors if body.mode=="partial" else FACTORS) if k!="kp_score" and detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if (body.mode=="exact_score" or body.mode=="partial" and "kp_score" in body.factors) and detail["kp_score"]==kp["kp_score"] else []))))
         frame=pd.DataFrame(records)
         if len(frame):
             for h in [5,15,30,60,120,240]:
