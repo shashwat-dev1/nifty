@@ -171,10 +171,21 @@ def search_rows(con,body,all_rows=False):
         elif body.mode=="sub":clauses.append(f"json_extract_string(details,'$.positions.{p}.sub')=?");args.append(sub_lord(x))
         else:clauses.append(f"abs((({expr}-?+540)%360)-180)<=?");args.extend([x,body.tolerance])
     where=" AND ".join(clauses)
-    count=con.execute("SELECT count(*) FROM snapshots WHERE "+where,args).fetchall()[0][0]
-    suffix=" ORDER BY ts DESC" if all_rows else " ORDER BY ts DESC LIMIT ? OFFSET ?"
-    projection="ts AS timestamp" if all_rows else "ts AS timestamp,details"
-    rows=con.execute("SELECT "+projection+" FROM snapshots WHERE "+where+suffix,args if all_rows else args+[body.limit,body.offset]).df()
+    indexed=os.getenv('NIFTY_CLOUD')=='1' and body.mode in ('exact','exact_score','partial','score','similarity') and bool(con.execute("SELECT count(*) FROM information_schema.tables WHERE table_name='snapshot_match_index'").fetchone()[0])
+    source='snapshots'
+    if indexed:
+        source='snapshot_match_index AS snapshots'
+        for factor in FACTORS:where=where.replace("json_extract_string(details,'$.ruling_planets."+factor+"')",'match_'+factor)
+        where=where.replace("CAST(json_extract(details,'$.kp_score') AS DOUBLE)",'match_score')
+    count=con.execute('SELECT count(*) FROM '+source+' WHERE '+where,args).fetchone()[0]
+    if all_rows:
+        rows=con.execute('SELECT ts AS timestamp FROM '+source+' WHERE '+where+' ORDER BY ts DESC',args).df()
+    elif indexed:
+        chosen='SELECT ts,model,lat,lon FROM '+source+' WHERE '+where+' ORDER BY ts DESC LIMIT ? OFFSET ?'
+        rows=con.execute('SELECT s.ts AS timestamp,s.details FROM snapshots s JOIN ('+chosen+') chosen USING (ts,model,lat,lon) ORDER BY s.ts DESC',args+[body.limit,body.offset]).df()
+    else:
+        rows=con.execute('SELECT ts AS timestamp,details FROM snapshots WHERE '+where+' ORDER BY ts DESC LIMIT ? OFFSET ?',args+[body.limit,body.offset]).df()
+
     return count,rows,kp
 @app.post("/api/matches",response_model=MatchResponse)
 def matches(body:Search):
@@ -258,7 +269,7 @@ def candles(timestamp:datetime,interval:int=1):
     if timestamp.tzinfo is None:raise HTTPException(422,"Timezone required")
     t=pd.Timestamp(timestamp).tz_convert(IST)
     with LOCK,db() as con:
-        rows=con.execute("SELECT timestamp,open,high,low,close FROM intraday WHERE timestamp::DATE=? AND interval_minutes=1 AND open IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL ORDER BY timestamp",[t.date()]).df()
+        rows=con.execute("SELECT timestamp,open,high,low,close FROM intraday WHERE timestamp>=? AND timestamp<? AND interval_minutes=1 AND open IS NOT NULL AND high IS NOT NULL AND low IS NOT NULL ORDER BY timestamp",[datetime.combine(t.date(),clock(),tzinfo=IST),datetime.combine(t.date()+timedelta(days=1),clock(),tzinfo=IST)]).df()
     if interval>1 and len(rows):
         rows=rows.set_index("timestamp")
         group=rows.resample(f"{interval}min",origin=rows.index[0]-pd.Timedelta(minutes=1),closed="right",label="right")
@@ -367,7 +378,7 @@ def paper_settle():
 @app.get('/api/daily-research')
 def daily_research(day:date):
     with LOCK,db() as con:
-        bars=con.execute('select timestamp,open,high,low,close from intraday where timestamp::date=? order by timestamp',[day]).df()
+        bars=con.execute('select timestamp,open,high,low,close from intraday where timestamp>=? and timestamp<? and interval_minutes=1 order by timestamp',[datetime.combine(day,clock(),tzinfo=IST),datetime.combine(day+timedelta(days=1),clock(),tzinfo=IST)]).df()
 
     from kp_engine import slots
     transitions=[];previous=None;timeline=[]

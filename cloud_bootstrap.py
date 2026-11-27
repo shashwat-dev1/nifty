@@ -23,4 +23,9 @@ if __name__=='__main__':
     download_snapshot(temporary,os.environ['FIREBASE_SNAPSHOT_ID'])
     restore(temporary,os.environ['FIREBASE_SNAPSHOT_SHA256'],ROOT)
     temporary.unlink()
+    import duckdb
+    from search_index import build
+    with duckdb.connect(str(ROOT/'archive/research.duckdb')) as con:
+        con.execute("SET memory_limit='128MB'");con.execute('SET threads=1');build(con)
+    print('Verified snapshot scalar search lookup built.')
     print('Private snapshot checksum verified and restored. Cloud research worker disabled.')

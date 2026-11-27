@@ -73,3 +73,15 @@ def test_selected_horizon_skips_other_forward_windows(client):
     assert response.status_code==200
     assert [call.args[2] for call in attach.call_args_list]==[15]
     assert response.headers.get('server-timing','').startswith('app;dur=')
+
+
+@pytest.mark.parametrize('mode,factors',[('exact',['day']),('exact_score',['day']),('partial',['day']),('partial',['kp_score']),('score',['day']),('similarity',['day'])])
+def test_scalar_index_matches_original_json_search(client,monkeypatch,mode,factors):
+    import custom_api as api
+    from search_index import build
+    body={'timestamp':'2026-11-19T11:00:00+05:30','start':'2026-11-19','end':'2026-11-19','mode':mode,'factors':factors,'minimum':-100,'maximum':100,'similarity':0,'horizon':15,'selected_horizon_only':True}
+    original=client.post('/api/matches',json=body).json();stats=client.post('/api/statistics',json=body).json()
+    with api.db(write=True) as con:build(con)
+    monkeypatch.setenv('NIFTY_CLOUD','1')
+    assert client.post('/api/matches',json=body).json()==original
+    assert client.post('/api/statistics',json=body).json()==stats
