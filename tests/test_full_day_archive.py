@@ -136,3 +136,26 @@ def test_corrupt_slot_archive_is_blocked(monkeypatch):
     r=TestClient(api.app).get('/api/kp/slot-matches',params={'timestamp':'2026-11-25T12:30:00+05:30'})
     assert r.status_code==409
     assert 'fresh KP verification' in r.json()['detail']
+
+def test_partial_matching_selected_factors_and_optional_exact_score():
+    import custom_api as api
+    import duckdb,copy
+    from datetime import datetime
+    from pydantic import ValidationError
+    import pytest
+    t=datetime.fromisoformat('2026-11-25T12:30:00+05:30');base=api.KPChart(t).calculate()
+    other_score=copy.deepcopy(base);other_score['kp_score']+=1
+    other_day=copy.deepcopy(base);other_day['ruling_planets']['day']='Saturn'
+    other_star=copy.deepcopy(base);other_star['ruling_planets']['moon_star']='Sun'
+    con=duckdb.connect(':memory:');con.execute('CREATE TABLE snapshots(ts TIMESTAMPTZ,model TEXT,lat DOUBLE,lon DOUBLE,details TEXT)')
+    for i,detail in enumerate([base,other_score,other_day,other_star],1):
+        con.execute('INSERT INTO snapshots VALUES(?,?,?,?,?)',[f'2025-01-0{i}T10:00:00+05:30',api.MODEL,api.LAT,api.LON,json.dumps(detail)])
+    def count(factors):
+        body=api.Search(timestamp=t,start=date(2025,1,1),end=date(2025,1,5),mode='partial',factors=factors)
+        return api.search_rows(con,body)[0]
+    assert count(['moon_star','moon_sub'])==3
+    assert count(['moon_star','moon_sub','kp_score'])==2
+    assert count(['day','moon_star','moon_sub','kp_score'])==1
+    assert count(['kp_score'])==3
+    with pytest.raises(ValidationError):api.Search(timestamp=t,mode='partial',factors=[])
+    con.close()

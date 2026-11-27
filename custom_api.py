@@ -68,7 +68,7 @@ class Search(Moment):
     mode:Literal["exact","exact_score","partial","sign","nakshatra","pada","star","sub","score","longitude","similarity"]="exact"
     similarity:float=Field(80,ge=0,le=100)
     weights:list[float]=Field(default_factory=lambda:[1,1,1,1,1],min_length=5,max_length=5)
-    factors:list[Literal["day","moon_sign","moon_star","moon_sub","lagna"]]=FACTORS
+    factors:list[Literal["day","moon_sign","moon_star","moon_sub","lagna","kp_score"]]=FACTORS
     planets:list[Literal["Sun","Moon","Mars","Mercury","Venus","Jupiter","Saturn","Rahu","Ketu"]]=["Moon"]
     tolerance:float=Field(5,ge=0,le=180)
     minimum:float=-30
@@ -137,9 +137,10 @@ def search_rows(con,body,all_rows=False):
     if body.history_scope=="market":
         clauses.append("EXISTS (SELECT 1 FROM intraday market WHERE market.timestamp=snapshots.ts AND market.interval_minutes=1)")
     for k in (FACTORS if body.mode in ("exact","exact_score") else body.factors if body.mode=="partial" else []):
+        if k=="kp_score":continue
         clauses.append(f"json_extract_string(details,'$.ruling_planets.{k}')=?")
         args.append(kp["ruling_planets"][k])
-    if body.mode=="exact_score":
+    if body.mode=="exact_score" or (body.mode=="partial" and "kp_score" in body.factors):
         clauses.append("CAST(json_extract(details,'$.kp_score') AS DOUBLE)=?")
         args.append(kp['kp_score'])
     if body.mode=="score":
@@ -173,10 +174,12 @@ def matches(body:Search):
         records=[]
         for r in rows.itertuples():
             detail=json.loads(r.details)
-            records.append(dict(timestamp=r.timestamp,score=detail["kp_score"],**detail["ruling_planets"],
+            required=body.factors if body.mode=="partial" else [*FACTORS,"kp_score"] if body.mode=="exact_score" else FACTORS
+            agrees=lambda k: detail['kp_score']==kp['kp_score'] if k=='kp_score' else detail['ruling_planets'][k]==kp['ruling_planets'][k]
+            records.append(dict(timestamp=r.timestamp,score=detail["kp_score"],**detail["ruling_planets"],required_factors=", ".join(required),required_matched=sum(agrees(k) for k in required),required_total=len(required),
                 matched=sum(detail["ruling_planets"][k]==kp["ruling_planets"][k] for k in FACTORS)+(int(detail["kp_score"]==kp["kp_score"]) if body.mode=="exact_score" else 0),
                 differences=", ".join(k for k in FACTORS if detail["ruling_planets"][k]!=kp["ruling_planets"][k]),category=body.mode,similarity=100*sum(w for k,w in zip(FACTORS,body.weights) if detail["ruling_planets"][k]==kp["ruling_planets"][k])/sum(body.weights) if body.mode=="similarity" else None,
-                matched_factors=", ".join([k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if body.mode=="exact_score" and detail["kp_score"]==kp["kp_score"] else []))))
+                matched_factors=", ".join([k for k in FACTORS if detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if (body.mode=="exact_score" or body.mode=="partial" and "kp_score" in body.factors) and detail["kp_score"]==kp["kp_score"] else []))))
         frame=pd.DataFrame(records)
         if len(frame):
             for h in [5,15,30,60,120,240]:
