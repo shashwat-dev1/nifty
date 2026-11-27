@@ -212,6 +212,8 @@ def statistics(body:Search):
         "median_percent":float(values.median()) if len(values) else None,
         "average_positive_points":float(points[values>body.neutral].mean()) if (values>body.neutral).any() else None,
         "average_negative_points":float(points[values < -body.neutral].mean()) if (values < -body.neutral).any() else None,
+        "median_positive_points":float(points[values>body.neutral].median()) if (values>body.neutral).any() else None,
+        "median_negative_points":float(points[values < -body.neutral].median()) if (values < -body.neutral).any() else None,
         "largest_positive_points":float(points.max()) if len(points) and points.max()>0 else None,
         "largest_negative_points":float(points.min()) if len(points) and points.min()<0 else None,
         "average_points":float(points.mean()) if len(points) else None,
