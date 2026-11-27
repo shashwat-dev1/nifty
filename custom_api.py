@@ -165,7 +165,8 @@ def search_rows(con,body,all_rows=False):
     where=" AND ".join(clauses)
     count=con.execute("SELECT count(*) FROM snapshots WHERE "+where,args).fetchall()[0][0]
     suffix=" ORDER BY ts DESC" if all_rows else " ORDER BY ts DESC LIMIT ? OFFSET ?"
-    rows=con.execute("SELECT ts AS timestamp,details FROM snapshots WHERE "+where+suffix,args if all_rows else args+[body.limit,body.offset]).df()
+    projection="ts AS timestamp" if all_rows else "ts AS timestamp,details"
+    rows=con.execute("SELECT "+projection+" FROM snapshots WHERE "+where+suffix,args if all_rows else args+[body.limit,body.offset]).df()
     return count,rows,kp
 @app.post("/api/matches",response_model=MatchResponse)
 def matches(body:Search):

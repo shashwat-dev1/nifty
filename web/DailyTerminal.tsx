@@ -14,9 +14,9 @@ export function DailyTerminal({Table}:any){
  const kp=useQuery({queryKey:['day-kp',stamp],queryFn:()=>api('calculate',{timestamp:stamp})});
  const horizon=Number(target),supportedHorizon=[15,30,60,120,240].includes(horizon);
  const canSearch=similar&&supportedHorizon&&(matchMode!=='partial'||partialFactors.length>0);
- const searchBody={timestamp:stamp,start:'1995-11-03',end:day,history_scope:'market',completed_before:true,horizon:supportedHorizon?horizon:15,minimum:(kp.data?.kp_score??0)-2,maximum:(kp.data?.kp_score??0)+2,mode:matchMode==='four'||matchMode==='three'?'similarity':matchMode,similarity:matchMode==='four'?80:60,factors:matchMode==='partial'?partialFactors:['moon_star','moon_sub'],limit:10};
+ const searchBody={timestamp:stamp,start:'1995-11-03',end:day,history_scope:'market',completed_before:true,horizon:supportedHorizon?horizon:15,minimum:matchMode==='score'?(kp.data?.kp_score??0)-2:-30,maximum:matchMode==='score'?(kp.data?.kp_score??0)+2:30,mode:matchMode==='four'||matchMode==='three'?'similarity':matchMode,similarity:matchMode==='four'?80:60,factors:matchMode==='partial'?partialFactors:['moon_star','moon_sub'],limit:10};
  const matches=useQuery({queryKey:['day-match',searchBody],enabled:canSearch,queryFn:()=>api('matches',searchBody)});
- const summary=useQuery({queryKey:['day-match-summary',searchBody],enabled:canSearch,queryFn:()=>api('statistics',searchBody)});
+ const summary=useQuery({queryKey:['day-match-summary',searchBody],enabled:canSearch&&matches.isSuccess&&!matches.isFetching,queryFn:()=>api('statistics',searchBody)});
 
  useEffect(()=>{setInspect(undefined)},[day]);
  return <div className="daily-workspace"><div className="daily-title"><div><p className="eyebrow">NIFTY 50 · RESEARCH WORKSPACE</p><h1>NIFTY research</h1><p>Explore KP slots and inspect exact historical matches.</p></div><span>Historical research</span></div>
