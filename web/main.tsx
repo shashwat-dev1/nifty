@@ -396,6 +396,7 @@ function App() {
   const coverage = useQuery({
     queryKey: ["coverage"],
     queryFn: () => api("coverage"),
+    enabled: page !== "Daily Research",
   });
   const upstox = useQuery({
     queryKey: ["upstox"],
@@ -404,6 +405,7 @@ function App() {
   const studies = useQuery({
     queryKey: ["studies"],
     queryFn: () => api("studies"),
+    enabled: !demo && ["Overview","Backtesting"].includes(page),
   });
   const jobs = useQuery({
     queryKey: ["jobs"],
@@ -1421,7 +1423,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={new QueryClient()}>
+  <QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false,refetchOnWindowFocus:false}}})}>
     <CloudWake><App /></CloudWake>
   </QueryClientProvider>,
 );

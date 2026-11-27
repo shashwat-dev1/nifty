@@ -32,9 +32,10 @@ export default async function handler(req,res){
  if(!((req.method==='GET'&&getPaths.has(route))||(req.method==='POST'&&postPaths.has(route))))return res.status(403).json({error:'Route unavailable'});
  if(req.method==='POST'&&req.headers.origin!==`https://${req.headers.host}`)return res.status(403).end();
  u.searchParams.delete('route');const upstream=new URL('/api/'+route,origin);upstream.search=u.search;
+ const began=performance.now();
  try{
   const result=await fetch(upstream,{method:req.method,headers:{Authorization:'Bearer '+BACKEND_API_KEY,'Content-Type':'application/json',Origin:origin.origin},body:req.method==='POST'?JSON.stringify(req.body):undefined,signal:AbortSignal.timeout(22000),redirect:'error'});
   if(!result.headers.get('content-type')?.includes('application/json'))return res.status(503).json({error:'Research server is starting'});
-  const text=await result.text();res.setHeader('Content-Type','application/json');return res.status(result.status).send(text);
+  const text=await result.text();res.setHeader('Server-Timing',`upstream;dur=${(performance.now()-began).toFixed(1)}`+(result.headers.get('server-timing')?`, ${result.headers.get('server-timing')}`:''));res.setHeader('Content-Type','application/json');return res.status(result.status).send(text);
  }catch{return res.status(503).json({error:'Research server is starting or unavailable'});}
 }

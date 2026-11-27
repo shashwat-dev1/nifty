@@ -2,7 +2,7 @@
 from datetime import date,datetime,time as clock,timedelta
 from pathlib import Path
 from typing import Literal
-import json,os,threading,uuid
+import json,os,threading,uuid,time
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
@@ -19,6 +19,7 @@ from research import FACTORS
 from api_models import CalculationResponse,MatchResponse,CandleResponse
 ROOT=Path(__file__).parent
 LOCK=threading.RLock()
+ASTRO_LOCK=threading.RLock()
 POOL=ThreadPoolExecutor(max_workers=1)
 JOB_FILE=ROOT/"archive/custom-jobs.json"
 try:JOBS=json.loads(JOB_FILE.read_text(encoding="utf-8"))
@@ -52,7 +53,11 @@ async def origin_guard(request:Request,call_next):
         origin=request.headers.get("origin")
         if origin and origin!=str(request.base_url).rstrip("/"):
             return JSONResponse({"detail":"Origin rejected"},403)
-    try:return await call_next(request)
+    started=time.perf_counter()
+    try:
+        response=await call_next(request)
+        response.headers["Server-Timing"]=f"app;dur={(time.perf_counter()-started)*1000:.1f}"
+        return response
     except (ValueError,duckdb.Error):return JSONResponse({"detail":"The operation could not be completed. Check the input or database availability."},400)
 class Moment(BaseModel):
     timestamp:datetime
@@ -75,6 +80,7 @@ class Search(Moment):
     maximum:float=30
     offset:int=Field(0,ge=0)
     limit:int=Field(25,ge=1,le=100)
+    selected_horizon_only:bool=False
     horizon:Literal[5,15,30,60,120,240]=15
     completed_before:bool=False
     history_scope:Literal["astronomical","market"]="astronomical"
@@ -114,7 +120,7 @@ def coverage():
         "last_sync":str(con.sql("select max(imported_at) from intraday").fetchall()[0][0])}
 @app.post("/api/calculate",response_model=CalculationResponse)
 def calculate(body:Moment):
-    with LOCK:
+    with ASTRO_LOCK:
         chart=KPChart(body.timestamp)
         result=json.loads(detailed(body.timestamp))
     signs=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"]
@@ -123,12 +129,14 @@ def calculate(body:Moment):
     from kp_diagnostics import subdivision
     result['weekday']=body.timestamp.strftime('%A')
     result['day_lord_rule']='Gregorian weekday at local midnight in Asia/Kolkata; not sunrise vara, Hora or Rahu Kaal'
-    result['moon_subdivision']=subdivision(chart.longitude('Moon'))
+    with ASTRO_LOCK:result['moon_subdivision']=subdivision(chart.longitude('Moon'))
     result['model']=MODEL
     return result
 def search_rows(con,body,all_rows=False):
-    selected=KPChart(body.timestamp)
-    kp=selected.calculate()
+    with ASTRO_LOCK:
+        selected=KPChart(body.timestamp)
+        kp=selected.calculate()
+        longitudes={p:selected.longitude(p) for p in body.planets} if body.mode in ("sign","nakshatra","pada","star","sub","longitude") else {}
     clauses=["model=?","lat=?","lon=?","ts<?","ts::DATE BETWEEN ? AND ?"]
     args=[MODEL,LAT,LON,body.timestamp,body.start,body.end]
     if body.completed_before:
@@ -155,7 +163,7 @@ def search_rows(con,body,all_rows=False):
         args.append(sum(body.weights)*body.similarity/100)
     for p in body.planets if body.mode in ("sign","nakshatra","pada","star","sub","longitude") else []:
         expr=f"CAST(json_extract(details,'$.positions.{p}.longitude') AS DOUBLE)"
-        x=selected.longitude(p)
+        x=longitudes[p]
         if body.mode=="sign":clauses.append(f"floor({expr}/30)=?");args.append(int(x/30))
         elif body.mode=="nakshatra":clauses.append(f"floor({expr}/(360.0/27))=?");args.append(int(x/(360/27)))
         elif body.mode=="pada":clauses.append(f"floor({expr}/(360.0/108))=?");args.append(int(x/(360/108)))
@@ -183,7 +191,7 @@ def matches(body:Search):
                 matched_factors=", ".join([k for k in (body.factors if body.mode=="partial" else FACTORS) if k!="kp_score" and detail["ruling_planets"][k]==kp["ruling_planets"][k]]+(["kp_score"] if (body.mode=="exact_score" or body.mode=="partial" and "kp_score" in body.factors) and detail["kp_score"]==kp["kp_score"] else []))))
         frame=pd.DataFrame(records)
         if len(frame):
-            for h in [5,15,30,60,120,240]:
+            for h in ([body.horizon] if body.selected_horizon_only else [5,15,30,60,120,240]):
                 out=attach_prices(con,frame[["timestamp"]],h)
                 frame["reference"]=out.close
                 frame[f"price_{h}"]=out.exit_price
@@ -226,7 +234,7 @@ def exact_slot_matches(timestamp:datetime,offset:int=0,limit:int=25):
     if timestamp.tzinfo is None:raise HTTPException(422,'Timezone required')
     if offset<0 or not 1<=limit<=100:raise HTTPException(422,'Invalid pagination')
     from full_day_archive import slot_search
-    with LOCK:
+    with LOCK,ASTRO_LOCK:
         result=slot_search(timestamp)
         page=result['rows'][offset:offset+limit]
         with db() as con:
@@ -360,10 +368,10 @@ def paper_settle():
 def daily_research(day:date):
     with LOCK,db() as con:
         bars=con.execute('select timestamp,open,high,low,close from intraday where timestamp::date=? order by timestamp',[day]).df()
-        features=con.execute('select ts timestamp,details from snapshots where ts::date=? and model=? order by ts',[day,MODEL]).df()
+
     from kp_engine import slots
     transitions=[];previous=None;timeline=[]
-    with LOCK:
+    with ASTRO_LOCK:
         for stamp in slots(day):
             d=KPChart(stamp).calculate()
             item={'timestamp':stamp,'score':d['kp_score'],**d['ruling_planets'],**d['components']}
@@ -377,7 +385,7 @@ def daily_research(day:date):
 @app.get('/api/kp/full-day-matches')
 def full_day_matches(day:date):
     from full_day_archive import search
-    with LOCK:return search(day)
+    with LOCK,ASTRO_LOCK:return search(day)
 
 @app.on_event('startup')
 def update_full_day_archive():
@@ -427,7 +435,7 @@ def features(body:Generation):
     def run():
         for day in pd.date_range(body.start,body.end):
             times=[pd.Timestamp.combine(day,time_value).tz_localize(IST)] if body.step==0 else pd.date_range(day+pd.Timedelta(hours=9,minutes=15),day+pd.Timedelta(hours=15,minutes=30),freq=f"{body.step}min",tz=IST)
-            with LOCK,db(write=True) as con:list(build(con,times))
+            with LOCK,ASTRO_LOCK,db(write=True) as con:list(build(con,times))
             yield str(day.date())
     return job(run)
 @app.post("/api/admin/sync")
@@ -451,7 +459,7 @@ def index_market(body:Generation):
         stride=body.step or 15
         times=times[(times.dt.hour*60+times.dt.minute)%stride==0]
         for i in range(0,len(times),128):
-            with LOCK,db(write=True) as con:list(build(con,times.iloc[i:i+128]))
+            with LOCK,ASTRO_LOCK,db(write=True) as con:list(build(con,times.iloc[i:i+128]))
             yield {'processed':min(i+128,len(times)),'eligible':len(times),'model':MODEL}
     return job(run)
 
@@ -531,7 +539,7 @@ def timeline(day:date,step:int=15):
     if step not in (1,5,15,30):raise HTTPException(422,"Unsupported sampling interval")
     from research import feature
     from kp_engine import slots
-    with LOCK:
+    with ASTRO_LOCK:
         rows=pd.DataFrame([feature(t) for t in slots(day,step)])
     return clean(rows)
 

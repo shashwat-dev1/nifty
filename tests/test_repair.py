@@ -50,3 +50,26 @@ def test_summary_all_matches_signed_averages_medians_and_missing_windows(client)
     assert (stats['positive'],stats['negative'],stats['flat'])==(1,1,1)
     assert stats['average_points']==pytest.approx(-10/3)
     assert stats['median_points']==0
+
+
+def test_kp_calculation_is_not_queued_behind_database_lock():
+    import custom_api as api
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime
+    pool=ThreadPoolExecutor(max_workers=1)
+    api.LOCK.acquire()
+    try:
+        future=pool.submit(api.calculate,api.Moment(timestamp=datetime.fromisoformat('2026-11-25T12:30:00+05:30')))
+        result=future.result(timeout=2)
+        assert result['kp_score']==-4
+    finally:
+        api.LOCK.release();pool.shutdown()
+
+def test_selected_horizon_skips_other_forward_windows(client):
+    import custom_api as api
+    from unittest.mock import patch
+    with patch.object(api,'attach_prices',wraps=api.attach_prices) as attach:
+        response=client.post('/api/matches',json={'timestamp':'2026-11-19T11:00:00+05:30','start':'2026-11-19','end':'2026-11-19','mode':'partial','factors':['day'],'horizon':15,'selected_horizon_only':True})
+    assert response.status_code==200
+    assert [call.args[2] for call in attach.call_args_list]==[15]
+    assert response.headers.get('server-timing','').startswith('app;dur=')
